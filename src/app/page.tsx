@@ -1,7 +1,7 @@
-import Navbar from "../components/Navbar";
-import Hero from "../components/Hero";
-import Features from "../components/Features";
-import Stats from "../components/Stats";
+import Navbar from "../components/layout/Navbar";
+import Hero from "../components/landing/Hero";
+import Features from "../components/landing/Features";
+import Stats from "../components/landing/Stats";
 
 
 export default function Home() {
