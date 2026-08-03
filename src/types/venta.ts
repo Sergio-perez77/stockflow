@@ -15,6 +15,10 @@ export type Venta = {
 
   fecha: string;
 
+  metodoPago: string;
+
+  estado: "Pagada" | "Pendiente" | "Anulada";
+
   items: ItemVenta[];
 
   total: number;

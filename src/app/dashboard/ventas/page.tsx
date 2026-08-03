@@ -40,6 +40,12 @@ export default function VentasPage() {
 
   const [clienteSeleccionado, setClienteSeleccionado] = useState("");
 
+  const [metodoPago, setMetodoPago] = useState("Efectivo");
+
+  const [estadoVenta, setEstadoVenta] = useState<
+    "Pagada" | "Pendiente"
+    >("Pagada");
+
   const [cantidad, setCantidad] = useState(1);
 
   const [carrito, setCarrito] = useState<
@@ -50,7 +56,7 @@ export default function VentasPage() {
     precio: number;
     subtotal: number;
   }[]
->([]);
+    >([]);
 
   const productoActual = productos.find(
   (p) => p.id === Number(productoSeleccionado)
@@ -79,72 +85,108 @@ export default function VentasPage() {
     return;
   }
 
+  const existente = carrito.find(
+  (item) => item.productoId === producto.id
+);
+
+if (existente) {
+  setCarrito(
+    carrito.map((item) =>
+      item.productoId === producto.id
+        ? {
+            ...item,
+            cantidad: item.cantidad + cantidad,
+            subtotal:
+              (item.cantidad + cantidad) *
+              item.precio,
+          }
+        : item
+    )
+  );
+} else {
   setCarrito([
     ...carrito,
     {
       productoId: producto.id,
       producto: producto.nombre,
       cantidad,
-      precio: Number(producto.precio.replace("$", "")),
+      precio: Number(
+        producto.precio.replace("$", "")
+      ),
       subtotal:
-        Number(producto.precio.replace("$", "")) *
-        cantidad,
+        Number(
+          producto.precio.replace("$", "")
+        ) * cantidad,
     },
   ]);
+}
 
   setProductoSeleccionado("");
   setCantidad(1);
 }
 
-  function registrarVenta() {
-  if (!productoSeleccionado) {
-    alert("Seleccioná un producto.");
+ function registrarVenta() {
+  if (!clienteSeleccionado) {
+    alert("Seleccioná un cliente.");
     return;
   }
 
-  if (!clienteSeleccionado) {
-  alert("Seleccioná un cliente.");
-  return;
-}
+  if (carrito.length === 0) {
+    alert("Agregá al menos un producto al carrito.");
+    return;
+  }
 
+ 
+
+  for (const item of carrito) {
   const producto = obtenerProductoPorId(
-  productos,
-  Number(productoSeleccionado)
-);
+    productos,
+    item.productoId
+  );
 
-  if (!producto) return;
+  if (!producto) {
+    alert(`No se encontró ${item.producto}.`);
+    return;
+  }
 
-  if (producto.stock === 0) {
-  alert("Este producto no tiene stock.");
-  return;
-}
-
-  if (!hayStock(producto, cantidad)) {
-  alert("No hay stock suficiente.");
-  return;
+  if (!hayStock(producto, item.cantidad)) {
+    alert(
+      `No hay stock suficiente para ${item.producto}.`
+    );
+    return;
+  }
 }
 
   const nuevosProductos = descontarStock(
-  productos,
-  producto.id,
-  cantidad,
-);
+    productos,
+    carrito
+  );
 
 setProductos(nuevosProductos);
 
 
 
-  const nuevaVenta = crearVenta(
-  clienteSeleccionado,
-  producto,
-  cantidad,
-);
+  
+
+  const nuevaVenta: Venta = {
+    id: Date.now(),
+    codigo: `VTA-${Date.now()}`,
+    cliente: clienteSeleccionado,
+    fecha: new Date().toLocaleDateString(),
+    metodoPago,
+    estado: estadoVenta,
+    items: carrito,
+    total: totalCarrito,
+  };
 
   setVentas([...ventas, nuevaVenta]);
 
+  setCarrito([]);
   setProductoSeleccionado("");
   setClienteSeleccionado("");
   setCantidad(1);
+  setMetodoPago("Efectivo");
+  setEstadoVenta("Pagada");
 }
 
   return (
@@ -189,6 +231,39 @@ setProductos(nuevosProductos);
             {cliente.nombre}
           </option>
         ))}
+      </select>
+
+
+      <select
+        value={metodoPago}
+        onChange={(e) => setMetodoPago(e.target.value)}
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+      >
+        <option>Efectivo</option>
+        <option>Débito</option>
+        <option>Crédito</option>
+        <option>Transferencia</option>
+        <option>Mercado Pago</option>
+        <option>Cuenta Corriente</option>
+      </select>
+
+
+      <select
+        value={estadoVenta}
+        onChange={(e) =>
+          setEstadoVenta(
+            e.target.value as "Pagada" | "Pendiente"
+          )
+        }
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+      >
+        <option value="Pagada">
+          Pagada
+        </option>
+
+        <option value="Pendiente">
+          Pendiente
+        </option>
       </select>
 
 
@@ -329,13 +404,10 @@ setProductos(nuevosProductos);
             </div>
 
             <button
-
-            className="mt-6 w-full bg-green-600 hover:bg-green-700 rounded-lg py-3 font-bold"
-
+              onClick={registrarVenta}
+              className="mt-6 w-full bg-green-600 hover:bg-green-700 rounded-lg py-3 font-bold"
             >
-
-            Confirmar venta
-
+              Confirmar venta
             </button>
 
             </div>
@@ -357,9 +429,11 @@ setProductos(nuevosProductos);
             <tr>
               <th className="text-left pb-4">Cliente</th>
               <th className="text-left pb-4">Fecha</th>
+              <th className="text-left pb-4">Método de pago</th>
               <th className="text-left pb-4">Producto</th>
               <th className="text-left pb-4">Cantidad</th>
               <th className="text-left pb-4">Total</th>
+              <th className="text-left pb-4">Estado</th>
             </tr>
 
           </thead>
@@ -374,11 +448,15 @@ setProductos(nuevosProductos);
               >
 
                 <td className="py-4">
+                  {venta.cliente}
+                </td>
+
+                <td>
                   {venta.fecha}
                 </td>
 
                 <td>
-                  {venta.cliente}
+                  {venta.metodoPago}
                 </td>
 
                 <td>
@@ -398,6 +476,18 @@ setProductos(nuevosProductos);
 
                 <td>
                   ${venta.total}
+                </td>
+
+                <td>
+                  <span
+                    className={
+                      venta.estado === "Pagada"
+                        ? "text-green-400 font-semibold"
+                        : "text-yellow-400 font-semibold"
+                    }
+                  >
+                    {venta.estado}
+                  </span>
                 </td>
 
               </tr>
