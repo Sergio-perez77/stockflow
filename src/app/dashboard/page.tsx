@@ -49,20 +49,26 @@ const valorInventario = productos.reduce(
 
 
 const productosMasVendidos = ventas.reduce((acc, venta) => {
-  const existente = acc.find(
-    (p) => p.nombre === venta.producto
-  );
 
-  if (existente) {
-    existente.cantidad += venta.cantidad;
-  } else {
-    acc.push({
-      nombre: venta.producto,
-      cantidad: venta.cantidad,
-    });
-  }
+  venta.items.forEach((item) => {
+
+    const existente = acc.find(
+      (p) => p.nombre === item.producto
+    );
+
+    if (existente) {
+      existente.cantidad += item.cantidad;
+    } else {
+      acc.push({
+        nombre: item.producto,
+        cantidad: item.cantidad,
+      });
+    }
+
+  });
 
   return acc;
+
 }, [] as { nombre: string; cantidad: number }[]);
 
 productosMasVendidos.sort(
@@ -136,9 +142,9 @@ productosMasVendidos.sort(
             ) : (
               <div className="space-y-3">
 
-                {productosMasVendidos.slice(0, 5).map((producto) => (
+                {productosMasVendidos.slice(0, 5).map((producto, index) => (
                   <div
-                    key={producto.nombre}
+                    key={`${producto.nombre}-${index}`}
                     className="flex justify-between border-b border-slate-800 pb-2"
                   >
                     <span>{producto.nombre}</span>

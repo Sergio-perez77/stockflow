@@ -31,6 +31,14 @@ export default function PurchaseModal({
   const [costo, setCosto] = useState(0);
   const [fecha, setFecha] = useState("");
 
+  const [metodoPago, setMetodoPago] = useState("Efectivo");
+
+  const [estado, setEstado] = useState<
+    "Pagada" | "Pendiente"
+  >("Pagada");
+
+  const [observaciones, setObservaciones] = useState("");
+
   useEffect(() => {
     if (open) {
       setProducto("");
@@ -38,6 +46,9 @@ export default function PurchaseModal({
       setCantidad(1);
       setCosto(0);
       setFecha(new Date().toISOString().split("T")[0]);
+      setMetodoPago("Efectivo");
+      setEstado("Pagada");
+      setObservaciones("");
     }
   }, [open]);
 
@@ -47,16 +58,42 @@ export default function PurchaseModal({
       title="Nueva compra"
       onClose={onClose}
       onSave={() => {
-        onSave({
-          producto,
-          proveedor,
-          cantidad,
-          costo,
-          fecha,
-        });
 
-        onClose();
-      }}
+      if (!producto) {
+        alert("Seleccioná un producto.");
+        return;
+      }
+
+      if (!proveedor) {
+        alert("Seleccioná un proveedor.");
+        return;
+      }
+
+      if (cantidad <= 0) {
+        alert("La cantidad debe ser mayor que cero.");
+        return;
+      }
+
+      if (costo <= 0) {
+        alert("El costo debe ser mayor que cero.");
+        return;
+      }
+
+      onSave({
+        codigo: `COMP-${Date.now()}`,
+        producto,
+        proveedor,
+        cantidad,
+        costo,
+        fecha,
+        metodoPago,
+        estado,
+        observaciones,
+      });
+
+      onClose();
+
+    }}
     >
       <div className="space-y-4">
 
@@ -114,6 +151,39 @@ export default function PurchaseModal({
           onChange={(e) => setFecha(e.target.value)}
           className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
         />
+
+
+        <select
+            value={metodoPago}
+            onChange={(e) => setMetodoPago(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          >
+            <option>Efectivo</option>
+            <option>Débito</option>
+            <option>Crédito</option>
+            <option>Transferencia</option>
+            <option>Mercado Pago</option>
+            <option>Cuenta Corriente</option>
+        </select>
+
+          <select
+            value={estado}
+            onChange={(e) =>
+              setEstado(e.target.value as "Pagada" | "Pendiente")
+            }
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          >
+            <option value="Pagada">Pagada</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+
+          <textarea
+            value={observaciones}
+            onChange={(e) => setObservaciones(e.target.value)}
+            placeholder="Observaciones (opcional)"
+            rows={3}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 resize-none"
+          />
 
       </div>
     </Modal>

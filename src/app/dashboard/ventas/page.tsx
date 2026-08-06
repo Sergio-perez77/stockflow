@@ -19,6 +19,8 @@ import {
   obtenerProductoPorId,
 } from "@/services/productos";
 
+import ComprobanteVenta from "@/components/ventas/ComprobanteVenta";
+
 
 
 export default function VentasPage() {
@@ -46,6 +48,30 @@ export default function VentasPage() {
     "Pagada" | "Pendiente"
     >("Pagada");
 
+  const [observaciones, setObservaciones] = useState("");
+
+  const [buscarVenta, setBuscarVenta] = useState("");
+
+  const [ventaSeleccionada, setVentaSeleccionada] =
+  useState<Venta | null>(null);
+
+  const [modalComprobante, setModalComprobante] =
+  useState(false);
+
+  const [modalDetalleAbierto, setModalDetalleAbierto] =
+  useState(false);
+
+  const [filtroEstado, setFiltroEstado] = useState("Todos");
+
+  const [filtroMetodoPago, setFiltroMetodoPago] = useState("Todos");
+
+  const [filtroCliente, setFiltroCliente] = useState("Todos");
+
+  const [filtroFecha, setFiltroFecha] = useState("");
+
+  const [ordenVentas, setOrdenVentas] =
+  useState("Más reciente");
+
   const [cantidad, setCantidad] = useState(1);
 
   const [carrito, setCarrito] = useState<
@@ -67,10 +93,23 @@ export default function VentasPage() {
   0
 );
 
+const cantidadProductos = carrito.reduce(
+  (total, item) => total + item.cantidad,
+  0
+);
+
+const productosDistintos = carrito.length;
+
   function agregarAlCarrito() {
   if (!productoSeleccionado) {
     alert("Seleccioná un producto.");
     return;
+
+  if (cantidad <= 0) {
+  alert("La cantidad debe ser mayor a 0.");
+  return;
+}
+  
   }
 
   const producto = obtenerProductoPorId(
@@ -79,6 +118,11 @@ export default function VentasPage() {
   );
 
   if (!producto) return;
+
+  if (producto.stock === 0) {
+  alert("Este producto no tiene stock.");
+  return;
+}
 
   if (!hayStock(producto, cantidad)) {
     alert("No hay stock suficiente.");
@@ -90,6 +134,12 @@ export default function VentasPage() {
 );
 
 if (existente) {
+
+  if (!hayStock(producto, existente.cantidad + cantidad)) {
+  alert("No hay stock suficiente.");
+  return;
+}
+
   setCarrito(
     carrito.map((item) =>
       item.productoId === producto.id
@@ -130,6 +180,8 @@ if (existente) {
     alert("Seleccioná un cliente.");
     return;
   }
+
+  
 
   if (carrito.length === 0) {
     alert("Agregá al menos un producto al carrito.");
@@ -175,6 +227,7 @@ setProductos(nuevosProductos);
     fecha: new Date().toLocaleDateString(),
     metodoPago,
     estado: estadoVenta,
+    observaciones,
     items: carrito,
     total: totalCarrito,
   };
@@ -187,7 +240,102 @@ setProductos(nuevosProductos);
   setCantidad(1);
   setMetodoPago("Efectivo");
   setEstadoVenta("Pagada");
+  setObservaciones("");
 }
+
+function anularVenta(id: number) {
+  if (!confirm("¿Deseás anular esta venta?")) {
+  return;
+}
+  const venta = ventas.find((v) => v.id === id);
+
+  if (!venta) return;
+
+  if (venta.estado === "Anulada") return;
+
+  const productosActualizados = [...productos];
+
+  venta.items.forEach((item) => {
+    const index = productosActualizados.findIndex(
+      (p) => p.id === item.productoId
+    );
+
+    if (index !== -1) {
+      productosActualizados[index] = {
+        ...productosActualizados[index],
+        stock:
+          productosActualizados[index].stock +
+          item.cantidad,
+      };
+    }
+  });
+
+  setProductos(productosActualizados);
+
+  setVentas(
+    ventas.map((v) =>
+      v.id === id
+        ? {
+            ...v,
+            estado: "Anulada",
+          }
+        : v
+    )
+  );
+}
+
+const ventasFiltradas = ventas.filter((venta) => {
+  const texto = buscarVenta.toLowerCase();
+
+  const coincideBusqueda =
+    venta.codigo.toLowerCase().includes(texto) ||
+    venta.cliente.toLowerCase().includes(texto) ||
+    venta.items.some((item) =>
+      item.producto.toLowerCase().includes(texto)
+    );
+
+  const coincideEstado =
+    filtroEstado === "Todos" ||
+    venta.estado === filtroEstado;
+
+  const coincideMetodo =
+    filtroMetodoPago === "Todos" ||
+    venta.metodoPago === filtroMetodoPago;
+
+  const coincideCliente =
+  filtroCliente === "Todos" ||
+  venta.cliente === filtroCliente;
+
+  const coincideFecha =
+  filtroFecha === "" ||
+  venta.fecha === filtroFecha;
+
+  return (
+    coincideBusqueda &&
+    coincideEstado &&
+    coincideMetodo &&
+    coincideCliente &&
+    coincideFecha 
+  );
+});
+
+const ventasOrdenadas = [...ventasFiltradas].sort(
+  (a, b) => {
+    switch (ordenVentas) {
+      case "Más antigua":
+        return a.id - b.id;
+
+      case "Mayor importe":
+        return b.total - a.total;
+
+      case "Menor importe":
+        return a.total - b.total;
+
+      default:
+        return b.id - a.id;
+    }
+  }
+);
 
   return (
    <>
@@ -195,7 +343,7 @@ setProductos(nuevosProductos);
     Ventas
   </h1>
 
-  <div className="bg-slate-900 rounded-xl p-6 border border-slate-800 max-w-xl">
+  <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 w-full max-w-full">
 
     <div className="space-y-4">
 
@@ -265,6 +413,16 @@ setProductos(nuevosProductos);
           Pendiente
         </option>
       </select>
+
+      
+
+      <textarea
+        value={observaciones}
+        onChange={(e) => setObservaciones(e.target.value)}
+        placeholder="Observaciones (opcional)"
+        rows={3}
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 resize-none"
+      />
 
 
       {productoActual && (
@@ -387,6 +545,36 @@ setProductos(nuevosProductos);
 
             </table>
 
+            <div className="bg-slate-800 rounded-lg p-4 mb-6">
+
+              <div className="flex justify-between mb-2">
+
+                <span>Productos distintos</span>
+
+                <strong>{productosDistintos}</strong>
+
+              </div>
+
+              <div className="flex justify-between mb-2">
+
+                <span>Unidades</span>
+
+                <strong>{cantidadProductos}</strong>
+
+              </div>
+
+              <div className="flex justify-between">
+
+                <span>Total</span>
+
+                <strong className="text-cyan-400">
+                  ${totalCarrito}
+                </strong>
+
+              </div>
+
+            </div>
+
             <div className="flex justify-between items-center mt-6">
 
             <h3 className="text-xl font-bold">
@@ -416,56 +604,163 @@ setProductos(nuevosProductos);
 
     </div>
 
-    <div className="mt-10 bg-slate-900 rounded-xl border border-slate-800 p-6">
+    <div className="mt-10 bg-slate-900 rounded-xl border border-slate-800 p-6 w-full">
 
         <h2 className="text-2xl font-bold mb-6">
           Historial de ventas
         </h2>
 
-        <table className="w-full">
+
+        <input
+          type="text"
+          value={buscarVenta}
+          onChange={(e) => setBuscarVenta(e.target.value)}
+          placeholder="Buscar por código, cliente o producto..."
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 mb-6"
+        />
+
+        <div className="flex flex-wrap gap-4 mb-6">
+
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          >
+            <option>Todos</option>
+            <option>Pagada</option>
+            <option>Pendiente</option>
+            <option>Anulada</option>
+          </select>
+
+          <select
+            value={filtroMetodoPago}
+            onChange={(e) =>
+              setFiltroMetodoPago(e.target.value)
+            }
+            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          >
+            <option>Todos</option>
+            <option>Efectivo</option>
+            <option>Débito</option>
+            <option>Crédito</option>
+            <option>Transferencia</option>
+            <option>Mercado Pago</option>
+            <option>Cuenta Corriente</option>
+          </select>
+
+          <select
+            value={filtroCliente}
+            onChange={(e) => setFiltroCliente(e.target.value)}
+            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          >
+            <option value="Todos">Todos los clientes</option>
+
+            {[...new Set(ventas.map((v) => v.cliente))].map(
+              (cliente) => (
+                <option
+                  key={cliente}
+                  value={cliente}
+                >
+                  {cliente}
+                </option>
+              )
+            )}
+          </select>
+
+          <input
+            type="date"
+            value={filtroFecha}
+            onChange={(e) => setFiltroFecha(e.target.value)}
+            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          />
+
+          <select
+            value={ordenVentas}
+            onChange={(e) => setOrdenVentas(e.target.value)}
+            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+          >
+            <option>Más reciente</option>
+            <option>Más antigua</option>
+            <option>Mayor importe</option>
+            <option>Menor importe</option>
+          </select>
+
+        </div>
+
+      <div className="max-h-[600px] overflow-y-auto     rounded-lg"></div>
+
+        <table className="w-full table-fixed">
 
           <thead className="border-b border-slate-700 text-gray-400">
 
             <tr>
-              <th className="text-left pb-4">Cliente</th>
-              <th className="text-left pb-4">Fecha</th>
-              <th className="text-left pb-4">Método de pago</th>
-              <th className="text-left pb-4">Producto</th>
-              <th className="text-left pb-4">Cantidad</th>
-              <th className="text-left pb-4">Total</th>
-              <th className="text-left pb-4">Estado</th>
+              <th className="px-2 pb-4 text-left w-[120px]">
+                Cliente
+              </th>
+
+              <th className="px-2 pb-4 text-left w-[90px]">
+                Fecha
+              </th>
+
+              <th className="px-2 pb-4 text-left w-[120px]">
+                Método de pago
+              </th>
+
+              <th className="px-2 pb-4 text-left">
+                Producto
+              </th>
+
+              <th className="px-2 pb-4 text-center w-[70px]">
+                Cantidad
+              </th>
+
+              <th className="px-2 pb-4 text-right w-[90px]">
+                Total
+              </th>
+
+              <th className="px-2 pb-4 text-center w-[90px]">
+                Estado
+              </th>
+
+              <th className="px-2 pb-4 text-center w-[110px]">
+                Acciones
+              </th>
             </tr>
 
           </thead>
 
           <tbody>
 
-            {ventas.map((venta) => (
+            {ventasOrdenadas.map((venta) => (
 
               <tr
                 key={venta.id}
                 className="border-b border-slate-800"
               >
 
-                <td className="py-4">
-                  {venta.cliente}
+                <td className="px-4 py-4 w-[180px]">
+                  <div className="truncate">
+                    {venta.cliente}
+                  </div>
                 </td>
 
-                <td>
+                <td className="px-2 py-4 whitespace-nowrap">
                   {venta.fecha}
                 </td>
 
-                <td>
+                <td className="px-4 py-4 whitespace-nowrap">
                   {venta.metodoPago}
                 </td>
 
-                <td>
-                  {venta.items
-                    ? venta.items.map((item) => item.producto).join(", ")
-                    : "-"}
+                <td className="px-4 py-4">
+
+                  {venta.items.length === 1
+                    ? venta.items[0].producto
+                    : `${venta.items.length} productos`}
+
                 </td>
 
-                <td>
+                <td className="text-center">
                   {venta.items
                     ? venta.items.reduce(
                         (total, item) => total + item.cantidad,
@@ -474,11 +769,11 @@ setProductos(nuevosProductos);
                     : "-"}
                 </td>
 
-                <td>
+                <td className="px-4 py-4 text-right font-semibold">
                   ${venta.total}
                 </td>
 
-                <td>
+                <td className="px-4 py-4 text-center">
                   <span
                     className={
                       venta.estado === "Pagada"
@@ -490,6 +785,36 @@ setProductos(nuevosProductos);
                   </span>
                 </td>
 
+
+
+                <td className="px-4 py-4">
+
+                  <div className="flex flex-col gap-2 items-center">
+
+                    <button
+                      onClick={() => {
+                        setVentaSeleccionada(venta);
+                        setModalComprobante(true);
+                      }}
+                      className="min-w-[110px] bg-cyan-600 hover:bg-cyan-700 px-3 py-1 text-xs rounded-md"
+                    >
+                      Comprobante
+                    </button>
+
+                    {venta.estado !== "Anulada" && (
+                      <button
+                        onClick={() => anularVenta(venta.id)}
+                        className="w-full bg-red-600 hover:bg-red-700 px-2 py-1 text-xs rounded-md"
+                      >
+                        Anular
+                      </button>
+                    )}
+
+                  </div>
+
+                </td>
+
+                
               </tr>
 
             ))}
@@ -498,9 +823,38 @@ setProductos(nuevosProductos);
 
         </table>
 
+      </div>
+
+    </div>
+
+  
+
+  {modalComprobante && ventaSeleccionada && (
+
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+
+    <div className="bg-slate-900 rounded-xl p-6 max-h-[90vh] overflow-auto">
+
+      <div className="flex justify-end mb-4">
+
+        <button
+          onClick={() => setModalComprobante(false)}
+          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
+        >
+          Cerrar
+        </button>
+
+      </div>
+
+      <ComprobanteVenta
+        venta={ventaSeleccionada}
+      />
+
     </div>
 
   </div>
+
+)}
 </>
   )
 }

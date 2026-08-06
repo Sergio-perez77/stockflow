@@ -7,8 +7,9 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   onClose: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   saveText?: string;
+  showSaveButton?: boolean;
 }
 
 export default function Modal({
@@ -18,6 +19,7 @@ export default function Modal({
   onClose,
   onSave,
   saveText = "Guardar",
+  showSaveButton = true,
 }: ModalProps) {
   if (!open) return null;
 
@@ -41,12 +43,14 @@ export default function Modal({
             Cancelar
           </button>
 
-          <button
-            onClick={onSave}
-            className="px-5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600"
-          >
-            {saveText}
-          </button>
+          {showSaveButton && (
+            <button
+              onClick={onSave}
+              className="px-5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600"
+            >
+              {saveText}
+            </button>
+          )}
 
         </div>
 

@@ -42,15 +42,37 @@ export default function SupplierModal({
       title={proveedor ? "Editar proveedor" : "Nuevo proveedor"}
       onClose={onClose}
       onSave={() => {
-        onSave({
-          empresa,
-          contacto,
-          email,
-          telefono,
-        });
 
-        onClose();
-      }}
+      if (!empresa.trim()) {
+        alert("Ingresá el nombre de la empresa.");
+        return;
+      }
+
+      if (!contacto.trim()) {
+        alert("Ingresá un contacto.");
+        return;
+      }
+
+      if (!email.trim()) {
+        alert("Ingresá un email.");
+        return;
+      }
+
+      if (!telefono.trim()) {
+        alert("Ingresá un teléfono.");
+        return;
+      }
+
+      onSave({
+        empresa: empresa.trim(),
+        contacto: contacto.trim(),
+        email: email.trim(),
+        telefono: telefono.trim(),
+      });
+
+      onClose();
+
+    }}
       saveText={proveedor ? "Actualizar" : "Guardar"}
     >
       <div className="space-y-4">

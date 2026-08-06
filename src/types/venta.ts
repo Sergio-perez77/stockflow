@@ -19,6 +19,8 @@ export type Venta = {
 
   estado: "Pagada" | "Pendiente" | "Anulada";
 
+  observaciones: string;
+
   items: ItemVenta[];
 
   total: number;

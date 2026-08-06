@@ -69,77 +69,125 @@ export default function ProveedoresPage() {
 
       </div>
 
-      <input
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar proveedor..."
-        className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 w-full md:w-80 mb-6"
-      />
+      <div className="grid grid-cols-4 gap-4 mb-6">
+
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p className="text-sm text-gray-400">
+            Proveedores
+          </p>
+
+          <p className="text-2xl font-bold text-white">
+            {proveedores.length}
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p className="text-sm text-gray-400">
+            Con email
+          </p>
+
+          <p className="text-2xl font-bold text-cyan-400">
+            {proveedores.filter((p) => p.email).length}
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p className="text-sm text-gray-400">
+            Con teléfono
+          </p>
+
+          <p className="text-2xl font-bold text-green-400">
+            {proveedores.filter((p) => p.telefono).length}
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p className="text-sm text-gray-400">
+            Resultados
+          </p>
+
+          <p className="text-2xl font-bold text-yellow-400">
+            {proveedoresFiltrados.length}
+          </p>
+        </div>
+
+      </div>
+
+<input
+  value={busqueda}
+  onChange={(e) => setBusqueda(e.target.value)}
+  placeholder="Buscar proveedor..."
+  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 mb-6"
+/>
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
 
-        <table className="w-full">
+        <div className="max-h-[600px] overflow-auto rounded-lg border border-slate-800">
 
-          <thead className="border-b border-slate-700 text-gray-400">
-            <tr>
-              <th className="text-left pb-4">Empresa</th>
-              <th className="text-left pb-4">Contacto</th>
-              <th className="text-left pb-4">Email</th>
-              <th className="text-left pb-4">Teléfono</th>
-              <th className="text-left pb-4">Acciones</th>
-            </tr>
-          </thead>
+          <table className="min-w-full">
 
-          <tbody>
+            <thead className="sticky top-0 bg-slate-900 border-b border-slate-700 text-gray-400 z-10">
+              <tr>
+                <th className="px-4 pb-4 text-left">Empresa</th>
+                <th className="px-4 pb-4 text-left">Contacto</th>
+                <th className="px-4 pb-4 text-left">Email</th>
+                <th className="px-4 pb-4 text-left">Teléfono</th>
+                <th className="px-4 pb-4 text-left">Acciones</th>
+              </tr>
+            </thead>
 
-            {proveedoresFiltrados.map((proveedor) => (
+            <tbody>
 
-              <tr
-                key={proveedor.id}
-                className="border-b border-slate-800"
-              >
+              {proveedoresFiltrados.map((proveedor) => (
 
-                <td className="py-4">{proveedor.empresa}</td>
-                <td>{proveedor.contacto}</td>
-                <td>{proveedor.email}</td>
-                <td>{proveedor.telefono}</td>
+                <tr
+                  key={proveedor.id}
+                  className="border-b border-slate-800"
+                >
 
-                <td className="space-x-2">
+                  <td className="py-4">{proveedor.empresa}</td>
+                  <td className="px-4 py-4">{proveedor.contacto}</td>
+                  <td className="px-4 py-4">{proveedor.email}</td>
+                  <td className="px-4 py-4">{proveedor.telefono}</td>
 
-                  <button
-                    onClick={() => {
-                      setProveedorEditando(proveedor);
-                      setOpenModal(true);
-                    }}
-                    className="bg-cyan-500 px-3 py-1 rounded hover:bg-cyan-600"
-                  >
-                    Editar
-                  </button>
+                <td className="px-4 py-4 w-[170px]">
 
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "¿Eliminar este proveedor?"
-                        )
-                      ) {
-                        eliminarProveedor(proveedor.id);
-                      }
-                    }}
-                    className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
-                  >
-                    Eliminar
-                  </button>
+                  <div className="flex flex-col gap-2">
+
+                    <button
+                      onClick={() => {
+                        setProveedorEditando(proveedor);
+                        setOpenModal(true);
+                      }}
+                      className="w-full bg-cyan-500 hover:bg-cyan-600 py-2 rounded-lg text-sm"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (confirm("¿Eliminar este proveedor?")) {
+                          eliminarProveedor(proveedor.id);
+                        }
+                      }}
+                      className="w-full bg-red-500 hover:bg-red-600 py-2 rounded-lg text-sm"
+                    >
+                      Eliminar
+                    </button>
+
+                  </div>
 
                 </td>
 
               </tr>
 
-            ))}
+              ))}
 
-          </tbody>
+            </tbody>
 
-        </table>
+          </table>
+
+        </div>
 
       </div>
 
