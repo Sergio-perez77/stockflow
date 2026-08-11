@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   DollarSign,
   BarChart3,
+
   Settings,
 } from "lucide-react";
 
@@ -93,6 +94,7 @@ export default function Sidebar() {
               Reportes
             </Link>
           </li>
+
 
           <li>
             <Link

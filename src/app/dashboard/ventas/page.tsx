@@ -224,7 +224,7 @@ setProductos(nuevosProductos);
     id: Date.now(),
     codigo: `VTA-${Date.now()}`,
     cliente: clienteSeleccionado,
-    fecha: new Date().toLocaleDateString(),
+    fecha: new Date().toLocaleDateString().split("T")[0],
     metodoPago,
     estado: estadoVenta,
     observaciones,
