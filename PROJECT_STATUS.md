@@ -94,7 +94,7 @@ Incluye
 
 Pendiente
 
-- Resolver scroll horizontal del dashboard.
+- Resolver scroll horizontal del dashboard. 
 
 ---
 
@@ -102,23 +102,24 @@ Pendiente
 
 Estado
 
-⬜ Sin comenzar
+✅ Finalizado
+
+
 
 ---
 
 ## Proveedores
 
-⬜
-
----
-
-## Inventario
+✅ Finalizado
 
 ⬜
 
 ---
+
 
 ## Reportes
+
+✅ Finalizado
 
 ⬜
 
@@ -131,6 +132,52 @@ Estado
 ---
 
 ## Configuración
+
+Estado actual
+
+Funcionalidad
+Estado
+Importar Excel✅
+
+Importar CSV✅
+
+Detectar tipo de datos✅
+
+Mapeo de columnas✅
+
+Validar mapeo✅
+
+Importar productos✅
+
+Importar clientes✅
+
+Importar proveedores ⚠️ estructura lista, falta revisar integración
+
+Importar ventas✅
+
+Guardar importación pendiente✅
+
+Vista previa✅
+
+Exportar productos❌ botón sin función
+
+Exportar clientes❌
+
+Exportar proveedores❌
+
+Exportar ventas❌
+
+Detectar duplicados❌
+
+Detectar datos incompletos❌
+
+Detectar inconsistencias❌
+
+Analizar histórico❌
+
+Dashboard histórico❌
+
+Unificar histórico con Stockflow❌
 
 ⬜
 

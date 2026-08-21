@@ -18,6 +18,19 @@ export default function ClientesPage() {
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
 
 
+  function generarIdCliente() {
+  let id = Date.now();
+
+  const idsExistentes = new Set(
+    clientes.map((cliente) => cliente.id)
+  );
+
+  while (idsExistentes.has(id)) {
+    id++;
+  }
+
+  return id;
+}
 
   function guardarCliente(cliente: {
   nombre: string;
@@ -50,7 +63,7 @@ if (existeDni) {
     setClientes([
       ...clientes,
       {
-        id: Date.now(),
+        id: generarIdCliente(),
         codigo: generarCodigo(
         "CLI",
         clientes.map((c) => c.codigo)

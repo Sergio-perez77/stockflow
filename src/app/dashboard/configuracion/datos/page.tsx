@@ -1,5 +1,9 @@
 "use client";
 
+import { existeProducto } from "@/lib/detectarDuplicados";
+
+import { generarCodigo } from "@/lib/generadorCodigos";
+
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
@@ -10,6 +14,8 @@ import {
   guardarImportacion,
   eliminarImportacion,
 } from "@/lib/storage";
+
+import type { Venta } from "@/types/venta";
 
 type FilaImportada = Record<string, unknown>;
 
@@ -43,12 +49,62 @@ export default function DatosPage() {
     "productos" | "clientes" | "proveedores" | "ventas" | null
   >(null);
 
+  const [tipoDatosManual, setTipoDatosManual] =
+  useState<TipoDatos | null>(null);
+
   const [mapeoColumnas, setMapeoColumnas] =
   useState<MapeoColumnas>({});
 
   const [erroresMapeo, setErroresMapeo] = useState<string[]>([]);
 
   const [importacionValidada, setImportacionValidada] = useState(false);
+
+  function generarIdsImportacion(
+  tipo: string,
+  cantidad: number
+): number[] {
+  const datosExistentes = cargarDatos<{ id: number }>(tipo);
+
+  const idsUsados = new Set(
+    datosExistentes.map((dato) => dato.id)
+  );
+
+  const ids: number[] = [];
+
+  let siguienteId = Date.now();
+
+  for (let i = 0; i < cantidad; i++) {
+    while (idsUsados.has(siguienteId)) {
+      siguienteId++;
+    }
+
+    ids.push(siguienteId);
+    idsUsados.add(siguienteId);
+    siguienteId++;
+  }
+
+  return ids;
+}
+
+
+  function convertirNumero(valor: unknown): number {
+  if (typeof valor === "number") {
+    return Number.isNaN(valor) ? 0 : valor;
+  }
+
+  if (typeof valor === "string") {
+    const numero = Number(
+      valor
+        .replace("$", "")
+        .replace(",", ".")
+        .trim()
+    );
+
+    return Number.isNaN(numero) ? 0 : numero;
+  }
+
+  return 0;
+}
 
   useEffect(() => {
   const pendiente =
@@ -80,19 +136,20 @@ const camposStockFlow: Record<
   ],
 
   clientes: [
+    "codigo",
     "nombre",
-    "documento",
+    "dni",
     "telefono",
     "email",
-    "direccion",
+    
   ],
 
   proveedores: [
-    "nombre",
-    "cuit",
+    "empresa",
+    "contacto",
     "telefono",
     "email",
-    "direccion",
+    
   ],
 
   ventas: [
@@ -125,32 +182,66 @@ const camposStockFlow: Record<
       )
     );
 
+  // VENTAS
   if (
-    tiene("sku", "producto", "articulo") &&
-    tiene("stock", "existencia", "cantidad")
+    tiene("fecha") &&
+    tiene("total", "importe", "monto", "venta")
+  ) {
+    return "ventas";
+  }
+
+  // PRODUCTOS
+  if (
+    tiene(
+      "producto",
+      "articulo",
+      "sku",
+      "codigo",
+      "descripcion"
+    ) &&
+    tiene(
+      "stock",
+      "existencia",
+      "cantidad",
+      "inventario"
+    )
   ) {
     return "productos";
   }
 
+  // PROVEEDORES
   if (
-    tiene("cliente", "nombre") &&
-    tiene("telefono", "email", "correo", "documento")
-  ) {
-    return "clientes";
-  }
-
-  if (
-    tiene("proveedor", "empresa") &&
-    tiene("telefono", "email", "correo", "cuit")
+    tiene(
+      "proveedor",
+      "razon social",
+      "empresa"
+    ) &&
+    tiene(
+      "cuit",
+      "telefono",
+      "email",
+      "correo"
+    )
   ) {
     return "proveedores";
   }
 
+  // CLIENTES
   if (
-    tiene("venta", "fecha") &&
-    tiene("total", "importe", "monto")
+    tiene(
+      "cliente",
+      "nombre",
+      "apellido"
+    ) &&
+    tiene(
+      "dni",
+      "documento",
+      "telefono",
+      "email",
+      "correo"
+    )
   ) {
-    return "ventas";
+    return "clientes";
   }
 
   return null;
@@ -171,26 +262,182 @@ const camposStockFlow: Record<
     const nuevoMapeo: MapeoColumnas = {};
 
     campos.forEach((campo) => {
-      const columnaEncontrada =
-        importacionPendiente.columnas.find(
-          (columna) => {
+      const equivalencias: Record<string, string[]> = {
+      codigo: [
+        "codigo",
+        "cod",
+        "codigo producto",
+        "codigo articulo",
+        "code",
+      ],
 
-            const origen = columna
-              .toLowerCase()
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "");
+      sku: [
+        "sku",
+        "codigo sku",
+        "referencia",
+        "ref",
+      ],
 
-            const destino = campo
-              .toLowerCase()
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "");
+      nombre: [
+        "nombre",
+        "producto",
+        "articulo",
+        "descripcion",
+        "descripcion producto",
+        "nombre producto",
+      ],
 
-            return (
-              origen.includes(destino) ||
-              destino.includes(origen)
-            );
-          }
-        );
+      categoria: [
+        "categoria",
+        "rubro",
+        "familia",
+        "tipo",
+      ],
+
+      stock: [
+        "stock",
+        "existencia",
+        "existencias",
+        "cantidad",
+        "cantidad disponible",
+        "stock actual",
+        "inventario",
+      ],
+
+      stockMinimo: [
+        "stock minimo",
+        "stockminimo",
+        "minimo",
+        "minimo stock",
+        "punto de pedido",
+      ],
+
+      costo: [
+        "costo",
+        "coste",
+        "precio costo",
+        "precio de costo",
+        "costo unitario",
+      ],
+
+      precio: [
+        "precio",
+        "precio venta",
+        "precio de venta",
+        "p venta",
+        "p. venta",
+        "venta",
+      ],
+
+      documento: [
+        "dni",
+        "documento",
+        "documento cliente",
+        "identificacion",
+      ],
+
+      empresa: [
+        "empresa",
+        "proveedor",
+        "razon social",
+        "razon",
+        "nombre empresa",
+      ],
+
+      contacto: [
+        "contacto",
+        "persona contacto",
+        "contacto proveedor",
+      ],
+
+      telefono: [
+        "telefono",
+        "tel",
+        "celular",
+        "movil",
+        "phone",
+      ],
+
+      email: [
+        "email",
+        "correo",
+        "correo electronico",
+        "mail",
+      ],
+
+      direccion: [
+        "direccion",
+        "domicilio",
+        "calle",
+      ],
+
+      cuit: [
+        "cuit",
+        "cuit proveedor",
+        "identificacion fiscal",
+      ],
+
+      cliente: [
+        "cliente",
+        "nombre cliente",
+        "cliente nombre",
+      ],
+
+      fecha: [
+        "fecha",
+        "fecha venta",
+        "fecha de venta",
+      ],
+
+      metodoPago: [
+        "metodo pago",
+        "forma pago",
+        "medio pago",
+        "pago",
+      ],
+
+      estado: [
+        "estado",
+        "estado venta",
+        "situacion",
+      ],
+
+      total: [
+        "total",
+        "importe",
+        "monto",
+        "total venta",
+        "importe total",
+      ],
+    };
+
+    const normalizar = (texto: string) =>
+      texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+    
+
+    const posibles = equivalencias[campo] || [
+      normalizar(campo),
+    ];
+
+    const columnaEncontrada =
+      importacionPendiente.columnas.find(
+        (columna) => {
+          const columnaNormalizada =
+            normalizar(columna);
+
+          return posibles.some(
+            (posible) =>
+              columnaNormalizada === posible ||
+              columnaNormalizada.includes(posible) ||
+              posible.includes(columnaNormalizada)
+          );
+        }
+      );
 
       nuevoMapeo[campo] = columnaEncontrada || "";
     });
@@ -215,23 +462,25 @@ const camposStockFlow: Record<
   const errores: string[] = [];
 
   const camposObligatorios: Record<TipoDatos, string[]> = {
-    productos: [
-      "nombre",
-    ],
+  productos: [
+    "nombre",
+    "stock",
+    "precio",
+  ],
 
-    clientes: [
-      "nombre",
-    ],
+  clientes: [
+    "nombre",
+  ],
 
-    proveedores: [
-      "nombre",
-    ],
+  proveedores: [
+    "empresa",
+  ],
 
-    ventas: [
-      "fecha",
-      "total",
-    ],
-  };
+  ventas: [
+    "fecha",
+    "total",
+  ],
+};
 
   camposObligatorios[tipoDatos].forEach((campo) => {
     if (!mapeoColumnas[campo]) {
@@ -275,6 +524,22 @@ const camposStockFlow: Record<
   return true;
 }
 
+  function generarIdImportacion(tipo: string) {
+  const datosExistentes = cargarDatos<{ id: number }>(tipo);
+
+  const idsExistentes = new Set(
+    datosExistentes.map((dato) => dato.id)
+  );
+
+  let id = Date.now();
+
+  while (idsExistentes.has(id)) {
+    id++;
+  }
+
+  return id;
+}
+
   function importarDatos() {
   if (!tipoDatos || !importacionPendiente) {
     return;
@@ -284,41 +549,295 @@ const camposStockFlow: Record<
     return;
   }
 
-  const registrosImportados = importacionPendiente.filas.map(
-    (fila) => {
+  const idsImportacion = generarIdsImportacion(
+  tipoDatos,
+  importacionPendiente.filas.length
+);
+
+  if (tipoDatos === "ventas") {
+    const codigosVentas = cargarDatos<{
+      codigo?: string;
+    }>("ventas")
+      .map((venta) => venta.codigo)
+      .filter((codigo): codigo is string => Boolean(codigo));
+
+    const ventasImportadas: Venta[] =
+      importacionPendiente.filas.map((fila, indice) => {
+
+        let codigo = String(
+          fila[mapeoColumnas.codigo] ?? ""
+        ).trim();
+
+        if (!codigo) {
+          codigo = generarCodigo(
+            "VTA",
+            codigosVentas
+          );
+
+          codigosVentas.push(codigo);
+        }
+
+        const cliente =
+          String(
+            fila[mapeoColumnas.cliente] ?? ""
+          );
+
+        const fecha =
+          String(
+            fila[mapeoColumnas.fecha] ?? ""
+          );
+
+        const metodoPago =
+          String(
+            fila[mapeoColumnas.metodoPago] ?? ""
+          );
+
+        const estadoOrigen =
+          String(
+            fila[mapeoColumnas.estado] ?? "Pagada"
+          );
+
+        const estado: Venta["estado"] =
+          estadoOrigen === "Pendiente" ||
+          estadoOrigen === "Anulada"
+            ? estadoOrigen
+            : "Pagada";
+
+        const total =
+          Number(
+            fila[mapeoColumnas.total] ?? 0
+          );
+
+        return {
+          id: idsImportacion[indice],
+
+          codigo,
+
+          cliente,
+
+          fecha,
+
+          metodoPago,
+
+          estado,
+
+          observaciones: "",
+
+          items: [],
+
+          total: Number.isNaN(total)
+            ? 0
+            : total,
+        };
+      });
+
+    const ventasExistentes =
+      cargarDatos<Venta>("ventas");
+
+    guardarDatos(
+      "ventas",
+      [
+        ...ventasExistentes,
+        ...ventasImportadas,
+      ]
+    );
+
+    eliminarImportacion(
+      "importacion_pendiente"
+    );
+
+    setImportacionValidada(false);
+    setMostrarMapeo(false);
+    setImportacionPendiente(null);
+    setFilas([]);
+    setColumnas([]);
+    setMapeoColumnas({});
+    setErroresMapeo([]);
+    setTipoDatos(null);
+    setArchivo(null);
+
+    alert(
+      `Importación completada. Se importaron ${ventasImportadas.length} ventas.`
+    );
+
+    return;
+  }
+
+  let codigosProductos: string[] = [];
+
+  if (tipoDatos === "productos") {
+    const productosExistentes =
+      cargarDatos<{ codigo?: string }>("productos");
+
+    codigosProductos = productosExistentes
+      .map((producto) => producto.codigo || "")
+      .filter(Boolean);
+  }
+
+  
+    const codigosClientes = cargarDatos<{
+    codigo?: string;
+  }>("clientes")
+    .map((cliente) => cliente.codigo)
+    .filter((codigo): codigo is string => Boolean(codigo));
+
+
+  const registrosImportados =
+    importacionPendiente.filas.map((fila, indice) => {
+
       const registro: Record<string, unknown> = {};
 
-      camposStockFlow[tipoDatos].forEach((campo) => {
-        const columnaOrigen = mapeoColumnas[campo];
+      camposStockFlow[tipoDatos].forEach(
+        (campo) => {
 
-        if (!columnaOrigen) {
+          const columnaOrigen =
+          mapeoColumnas[campo];
+
+        if (!columnaOrigen && campo !== "codigo") {
           return;
         }
 
-        registro[campo] = fila[columnaOrigen];
-      });
+        const valor = columnaOrigen
+          ? fila[columnaOrigen]
+          : "";
 
-      return {
-        id: Date.now() + Math.random(),
-        ...registro,
-      };
-    }
-  );
+          if (
+            tipoDatos === "productos" &&
+            campo === "codigo" &&
+            !String(valor).trim()
+          ) {
+            const nuevoCodigo = generarCodigo(
+              "PROD",
+              codigosProductos
+            );
 
-  const claveStorage = tipoDatos;
+            codigosProductos.push(nuevoCodigo);
+
+            registro[campo] = nuevoCodigo;
+
+            return;
+          }
+
+          if (
+            tipoDatos === "clientes" &&
+            campo === "codigo" &&
+            !String(valor).trim()
+          ) {
+            const nuevoCodigo = generarCodigo(
+              "CLI",
+              codigosClientes
+            );
+
+            codigosClientes.push(nuevoCodigo);
+
+            registro[campo] = nuevoCodigo;
+
+            return;
+          }
+
+          if (
+          tipoDatos === "productos" &&
+          (
+            campo === "stock" ||
+            campo === "stockMinimo"
+          )
+        ) {
+          registro[campo] =
+            convertirNumero(valor);
+
+        } else if (
+          tipoDatos === "productos" &&
+          (
+            campo === "costo" ||
+            campo === "precio"
+          )
+        ) {
+          registro[campo] =
+            String(valor ?? "");
+
+        } else {
+          registro[campo] = valor;
+        }
+        }
+      );
+
+      if (tipoDatos === "productos") {
+            return {
+              id: idsImportacion[indice],
+              codigo: String(registro.codigo ?? ""),
+              sku: String(registro.sku ?? ""),
+              nombre: String(registro.nombre ?? ""),
+              categoria: String(registro.categoria ?? ""),
+              stock: convertirNumero(registro.stock),
+              stockMinimo: convertirNumero(registro.stockMinimo),
+              costo: String(registro.costo ?? ""),
+              precio: String(registro.precio ?? ""),
+            };
+          }
+
+
+          if (tipoDatos === "clientes") {
+            return {
+              id: idsImportacion[indice],
+              codigo: String(registro.codigo ?? ""),
+              nombre: String(registro.nombre ?? ""),
+              dni: String(registro.dni ?? ""),
+              email: String(registro.email ?? ""),
+              telefono: String(registro.telefono ?? ""),
+            };
+          }
+
+          if (tipoDatos === "proveedores") {
+            return {
+              id: idsImportacion[indice],
+              empresa: String(registro.empresa ?? ""),
+              contacto: String(registro.contacto ?? ""),
+              email: String(registro.email ?? ""),
+              telefono: String(registro.telefono ?? ""),
+            };
+          }
+
+            return {
+              id: idsImportacion[indice],
+              ...registro,
+            };
+    });
 
   const datosExistentes =
-    cargarDatos<Record<string, unknown>>(claveStorage);
-
-  guardarDatos(
-    claveStorage,
-    [
-      ...datosExistentes,
-      ...registrosImportados,
-    ]
+  cargarDatos<Record<string, unknown>>(
+    tipoDatos
   );
 
-  eliminarImportacion("importacion_pendiente");
+    let registrosFinales = registrosImportados;
+    let registrosDuplicados = 0;
+
+    if (tipoDatos === "productos") {
+      const nuevosProductos = registrosImportados.filter(
+        (producto) =>
+          !existeProducto(
+            datosExistentes,
+            producto
+          )
+      );
+
+      registrosDuplicados =
+        registrosImportados.length -
+        nuevosProductos.length;
+
+      registrosFinales = nuevosProductos;
+    }
+
+    guardarDatos(
+      tipoDatos,
+      [
+        ...datosExistentes,
+        ...registrosFinales,
+      ]
+    );
+
+  eliminarImportacion(
+    "importacion_pendiente"
+  );
 
   setImportacionValidada(false);
   setMostrarMapeo(false);
@@ -331,8 +850,12 @@ const camposStockFlow: Record<
   setArchivo(null);
 
   alert(
-    `Importación completada. Se importaron ${registrosImportados.length} registros.`
-  );
+  `Importación completada. Se importaron ${registrosFinales.length} registros.${
+    registrosDuplicados > 0
+      ? ` Se omitieron ${registrosDuplicados} registros duplicados.`
+      : ""
+  }`
+);
 }
 
   async function seleccionarArchivo(
@@ -840,19 +1363,62 @@ const camposStockFlow: Record<
     )}
 
         {!tipoDatos && (
-          <div className="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+  <div className="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-5">
 
-            <p className="text-yellow-400 font-semibold">
-              No pudimos determinar automáticamente el tipo de información.
-            </p>
+    <p className="text-yellow-400 font-semibold">
+      No pudimos determinar automáticamente el tipo de información.
+    </p>
 
-            <p className="text-gray-400 text-sm mt-1">
-              Podrás seleccionar manualmente qué tipo de datos contiene
-              este archivo en el siguiente paso.
-            </p>
+    <p className="text-gray-400 text-sm mt-1 mb-5">
+      Las columnas de este archivo no coinciden con una estructura
+      conocida de StockFlow. Seleccioná manualmente qué tipo de
+      información contiene.
+    </p>
 
-          </div>
-        )}
+    <div className="max-w-md">
+
+      <label className="block text-gray-400 text-sm mb-2">
+        Tipo de información
+      </label>
+
+      <select
+        value={tipoDatosManual || ""}
+        onChange={(e) => {
+          setTipoDatosManual(
+            e.target.value
+              ? (e.target.value as TipoDatos)
+              : null
+          );
+        }}
+        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white"
+      >
+
+        <option value="">
+          Seleccioná un tipo
+        </option>
+
+        <option value="productos">
+          Productos
+        </option>
+
+        <option value="clientes">
+          Clientes
+        </option>
+
+        <option value="proveedores">
+          Proveedores
+        </option>
+
+        <option value="ventas">
+          Ventas
+        </option>
+
+      </select>
+
+    </div>
+
+  </div>
+)}
 
       </div>
     )}
