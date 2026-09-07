@@ -25,7 +25,7 @@ interface ProductModalProps {
   } | null;
 }
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 
 
@@ -37,33 +37,19 @@ export default function ProductModal({
   producto,
 }: ProductModalProps) {
 
-const [nombre, setNombre] = useState(producto?.nombre || "");
-const [sku, setSku] = useState(producto?.sku ?? "");
-const [categoria, setCategoria] = useState(producto?.categoria || "");
-const [precio, setPrecio] = useState(producto?.precio || "");
-const [costo, setCosto] = useState(producto?.costo ?? "");
-const [stock, setStock] = useState(producto?.stock || 0);
+const [nombre, setNombre] = useState(() => producto?.nombre || "");
+const [sku, setSku] = useState(() => producto?.sku ?? "");
+const [categoria, setCategoria] = useState(() => producto?.categoria || "");
+const [precio, setPrecio] = useState(() => producto?.precio || "");
+const [costo, setCosto] = useState(() => producto?.costo ?? "");
+const [stock, setStock] = useState(() => producto?.stock || 0);
 const [stockMinimo, setStockMinimo] = useState(
-  producto?.stockMinimo || 0
+  () => producto?.stockMinimo || 0
 );
-
-useEffect(() => {
-  if (producto) {
-    setNombre(producto.nombre);
-    setSku(producto.sku ?? "");
-    setCategoria(producto.categoria);
-    setPrecio(producto.precio);
-    setCosto(producto.costo ?? "");
-    setStock(producto.stock);
-    setStockMinimo(producto.stockMinimo ?? 0);
-  }
-}, [producto]);
-
-
-
 
   return (
   <Modal
+    key={`${open ? "open" : "closed"}-${producto?.id ?? "new"}`}
     open={open}
     title={producto ? "Editar producto" : "Nuevo producto"}
     onClose={onClose}

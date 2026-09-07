@@ -49,6 +49,7 @@ export default function ReportesPage() {
 }
 
   const ventasFiltradas = ventas.filter((venta) => {
+    const cumpleEstado = venta.estado !== "Anulada";
   const cumpleCliente =
     cliente === "Todos" || venta.cliente === cliente;
 
@@ -67,6 +68,7 @@ export default function ReportesPage() {
     !hasta || fechaVenta <= hasta;
 
   return (
+    cumpleEstado &&
     cumpleCliente &&
     cumpleProducto &&
     cumpleDesde &&

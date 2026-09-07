@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Navbar() {
   return (
     <nav className="flex items-center justify-between px-8 py-6 border-b border-slate-800">
@@ -12,9 +14,12 @@ export default function Navbar() {
         <a href="#" className="hover:text-cyan-400">Contacto</a>
       </div>
 
-      <button className="bg-cyan-500 px-5 py-2 rounded-lg hover:bg-cyan-600 transition">
+      <Link
+        href="/login"
+        className="bg-cyan-500 px-5 py-2 rounded-lg hover:bg-cyan-600 transition"
+      >
         Iniciar sesión
-      </button>
+      </Link>
     </nav>
   );
 }

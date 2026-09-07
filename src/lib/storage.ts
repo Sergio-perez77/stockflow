@@ -1,5 +1,18 @@
 import type { Cliente } from "@/types/cliente";
 
+const API_COLLECTIONS: Record<string, string> = {
+  productos: "products",
+  clientes: "clientes",
+  proveedores: "proveedores",
+  ventas: "ventas",
+};
+
+export function obtenerRutaApiDatos(clave: string): string | null {
+  const coleccion = API_COLLECTIONS[clave];
+
+  return coleccion ? `/api/${coleccion}` : null;
+}
+
 export function cargarDatos<T>(clave: string): T[] {
   if (typeof window === "undefined") return [];
 
@@ -9,10 +22,6 @@ export function cargarDatos<T>(clave: string): T[] {
 
   const datosParseados = JSON.parse(datos);
 
-  // ==========================================
-  // NORMALIZACIÓN DE CLIENTES
-  // ==========================================
-
   if (clave === "clientes") {
     const clientes = datosParseados as Cliente[];
 
@@ -21,11 +30,9 @@ export function cargarDatos<T>(clave: string): T[] {
     const clientesNormalizados = clientes.map((cliente) => {
       let id = cliente.id;
 
-      // Si el ID ya existe, generamos uno nuevo
       if (idsUsados.has(id)) {
         id = Date.now();
 
-        // Nos aseguramos de que tampoco coincida
         while (idsUsados.has(id)) {
           id++;
         }
@@ -39,7 +46,6 @@ export function cargarDatos<T>(clave: string): T[] {
       };
     });
 
-    // Si hubo cambios, guardamos inmediatamente la versión corregida
     if (
       JSON.stringify(clientesNormalizados) !==
       JSON.stringify(clientes)
@@ -60,6 +66,16 @@ export function guardarDatos<T>(clave: string, datos: T[]) {
   if (typeof window === "undefined") return;
 
   localStorage.setItem(clave, JSON.stringify(datos));
+
+  const apiPath = obtenerRutaApiDatos(clave);
+
+  if (!apiPath) return;
+
+  void fetch(apiPath, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  }).catch(() => undefined);
 }
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import type { Proveedor } from "@/types/proveedor";
 
@@ -17,27 +17,14 @@ export default function SupplierModal({
   onSave,
   proveedor,
 }: SupplierModalProps) {
-  const [empresa, setEmpresa] = useState("");
-  const [contacto, setContacto] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefono, setTelefono] = useState("");
-
-  useEffect(() => {
-    if (proveedor) {
-      setEmpresa(proveedor.empresa);
-      setContacto(proveedor.contacto);
-      setEmail(proveedor.email);
-      setTelefono(proveedor.telefono);
-    } else {
-      setEmpresa("");
-      setContacto("");
-      setEmail("");
-      setTelefono("");
-    }
-  }, [proveedor, open]);
+  const [empresa, setEmpresa] = useState(() => proveedor?.empresa || "");
+  const [contacto, setContacto] = useState(() => proveedor?.contacto || "");
+  const [email, setEmail] = useState(() => proveedor?.email || "");
+  const [telefono, setTelefono] = useState(() => proveedor?.telefono || "");
 
   return (
     <Modal
+      key={`${open ? "open" : "closed"}-${proveedor?.id ?? "new"}`}
       open={open}
       title={proveedor ? "Editar proveedor" : "Nuevo proveedor"}
       onClose={onClose}

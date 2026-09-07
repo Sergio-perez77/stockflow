@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 
 interface ClientModalProps {
@@ -28,29 +28,14 @@ export default function ClientModal({
   onSave,
   cliente,
 }: ClientModalProps) {
-  const [nombre, setNombre] = useState(cliente?.nombre || "");
-  const [dni, setDni] = useState(cliente?.dni || "");
-  const [email, setEmail] = useState(cliente?.email || "");
-  const [telefono, setTelefono] = useState(cliente?.telefono || "");
-
-  useEffect(() => {
-  if (!open) return;
-
-  if (cliente) {
-    setNombre(cliente.nombre);
-    setDni(cliente.dni);
-    setEmail(cliente.email);
-    setTelefono(cliente.telefono);
-  } else {
-    setNombre("");
-    setDni("");
-    setEmail("");
-    setTelefono("");
-  }
-}, [cliente, open]);
+  const [nombre, setNombre] = useState(() => cliente?.nombre || "");
+  const [dni, setDni] = useState(() => cliente?.dni || "");
+  const [email, setEmail] = useState(() => cliente?.email || "");
+  const [telefono, setTelefono] = useState(() => cliente?.telefono || "");
 
   return (
   <Modal
+    key={`${open ? "open" : "closed"}-${cliente?.id ?? "new"}`}
     open={open}
     title={cliente ? "Editar cliente" : "Nuevo cliente"}
     onClose={onClose}

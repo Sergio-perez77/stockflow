@@ -14,6 +14,8 @@ import type { Venta } from "@/types/venta";
 
 import LowStockProducts from "@/components/dashboard/LowStockProducts";
 
+import { convertirNumero } from "@/lib/numeros";
+
 
 
 export default function DashboardPage() {
@@ -24,13 +26,14 @@ export default function DashboardPage() {
 const { datos: clientes } =
   useLocalStorage<Cliente>("clientes");
 
-const { datos: proveedores } =
-  useLocalStorage<Proveedor>("proveedores");
-
 const { datos: ventas } =
   useLocalStorage<Venta>("ventas");
 
-const totalVentas = ventas.reduce(
+const ventasVigentes = ventas.filter(
+  (venta) => venta.estado !== "Anulada"
+);
+
+const totalVentas = ventasVigentes.reduce(
   (total, venta) => total + Number(venta.total),
   0
 );
@@ -42,13 +45,13 @@ const stockBajo = productos.filter(
 const valorInventario = productos.reduce(
   (total, producto) =>
     total +
-    Number(producto.precio.replace("$", "")) *
+    convertirNumero(producto.precio) *
       producto.stock,
   0
 );
 
 
-const productosMasVendidos = ventas.reduce((acc, venta) => {
+const productosMasVendidos = ventasVigentes.reduce((acc, venta) => {
 
   venta.items.forEach((item) => {
 

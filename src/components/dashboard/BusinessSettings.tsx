@@ -1,48 +1,40 @@
 "use client";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { defaultNegocio, normalizarNegocio } from "@/lib/negocio";
 import type { Negocio } from "@/types/negocio";
 
 import { useEffect, useState } from "react";
 
 export default function BusinessSettings() {
+  const { datos, setDatos } = useLocalStorage<Negocio>("negocio");
 
-  const {
-    datos,
-    setDatos,
-  } = useLocalStorage<Negocio>("negocio");
-
-  const negocioGuardado =
-  datos[0] ?? {
-    nombre: "",
-    logo: "",
-    propietario: "",
-    email: "",
-    telefono: "",
-    direccion: "",
-    ciudad: "",
-    provincia: "",
-    pais: "Argentina",
-    codigoPostal: "",
-    moneda: "ARS",
-    simboloMoneda: "$",
-  };
+  const [negocio, setNegocio] = useState<Negocio>(() => {
+    const inicial = datos[0] ?? defaultNegocio;
+    return normalizarNegocio(inicial);
+  });
+  const [guardado, setGuardado] = useState(false);
 
   useEffect(() => {
-  setNegocio(negocioGuardado);
-}, [datos]);
+    if (datos[0]) {
+      setNegocio(normalizarNegocio(datos[0]));
+    }
+  }, [datos]);
 
-const [negocio, setNegocio] = useState(negocioGuardado);
+  function actualizar(campo: keyof Negocio, valor: string) {
+    setGuardado(false);
+    setNegocio((actual) => ({
+      ...actual,
+      [campo]: valor,
+    }));
+  }
 
-  function actualizar(
-  campo: keyof Negocio,
-  valor: string
-) {
-  setNegocio({
-    ...negocio,
-    [campo]: valor,
-  });
-}
+  function guardarNegocio() {
+    const negocioNormalizado = normalizarNegocio(negocio);
+    setNegocio(negocioNormalizado);
+    setDatos([negocioNormalizado]);
+    setGuardado(true);
+  }
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -151,28 +143,9 @@ const [negocio, setNegocio] = useState(negocioGuardado);
                 <select
                 value={negocio.moneda}
                 onChange={(e) => {
-
                     const nuevaMoneda = e.target.value;
-
                     actualizar("moneda", nuevaMoneda);
-
-                    const simbolos: Record<string, string> = {
-                    ARS: "$",
-                    USD: "US$",
-                    EUR: "€",
-                    UYU: "$U",
-                    CLP: "$",
-                    PYG: "₲",
-                    BRL: "R$",
-                    MXN: "$",
-                    COP: "$",
-                    PEN: "S/",
-                    };
-
-                    actualizar(
-                    "simboloMoneda",
-                    simbolos[nuevaMoneda] ?? "$"
-                    );
+                    actualizar("simboloMoneda", nuevaMoneda ? getMonedaSymbol(nuevaMoneda) : "$");
                 }}
                 className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
                 >
@@ -190,10 +163,13 @@ const [negocio, setNegocio] = useState(negocioGuardado);
 
             </div>
 
-            <div className="flex justify-end mt-6">
+            <div className="flex items-center justify-between mt-6">
+                <p className={`text-sm ${guardado ? "text-emerald-400" : "text-gray-400"}`}>
+                    {guardado ? "Cambios guardados" : "Hay cambios pendientes"}
+                </p>
 
                 <button
-                    onClick={() => setDatos([negocio])}
+                    onClick={guardarNegocio}
                     className="bg-cyan-500 hover:bg-cyan-600 px-6 py-3 rounded-lg font-semibold"
                 >
                     Guardar cambios
@@ -204,4 +180,21 @@ const [negocio, setNegocio] = useState(negocioGuardado);
         </div>
   );
 
+}
+
+function getMonedaSymbol(moneda: string): string {
+  const simbolos: Record<string, string> = {
+    ARS: "$",
+    USD: "US$",
+    EUR: "€",
+    UYU: "$U",
+    CLP: "$",
+    PYG: "₲",
+    BRL: "R$",
+    MXN: "$",
+    COP: "$",
+    PEN: "S/",
+  };
+
+  return simbolos[moneda] ?? "$";
 }

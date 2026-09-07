@@ -17,22 +17,43 @@ export default function SalesChart() {
   const { datos: ventas } =
     useLocalStorage<Venta>("ventas");
 
-  const datosGrafico = ventas.reduce((acc, venta) => {
-  const existente = acc.find(
-    (p) => p.producto === venta.producto
-  );
-
-  if (existente) {
-    existente.total += Number(venta.total);
-  } else {
-    acc.push({
-      producto: venta.producto,
-      total: Number(venta.total),
-    });
+  function normalizarFecha(fecha: string) {
+  if (fecha.includes("-")) {
+    return fecha;
   }
 
-  return acc;
-}, [] as { producto: string; total: number }[]);
+  const partes = fecha.split("/");
+
+  if (partes.length !== 3) {
+    return fecha;
+  }
+
+  const [dia, mes, anio] = partes;
+
+  return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+}
+
+const datosGrafico = ventas
+  .filter((venta) => venta.estado !== "Anulada")
+  .reduce((acumulado, venta) => {
+    const fecha = normalizarFecha(venta.fecha);
+
+    const existente = acumulado.find(
+      (dato) => dato.fecha === fecha
+    );
+
+    if (existente) {
+      existente.total += venta.total;
+    } else {
+      acumulado.push({
+        fecha,
+        total: venta.total,
+      });
+    }
+
+    return acumulado;
+  }, [] as { fecha: string; total: number }[])
+  .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   return (
     <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
@@ -58,7 +79,7 @@ export default function SalesChart() {
               />
 
               <XAxis
-                dataKey="producto"
+                dataKey="fecha"
                 stroke="#94a3b8"
               />
 

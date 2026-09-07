@@ -1,0 +1,14 @@
+{
+  "products": [],
+  "clientes": [],
+  "proveedores": [],
+  "ventas": [],
+  "users": [
+    {
+      "id": "demo-admin",
+      "nombre": "Sergio P.",
+      "email": "admin@stockflow.com",
+      "role": "admin"
+    }
+  ]
+}

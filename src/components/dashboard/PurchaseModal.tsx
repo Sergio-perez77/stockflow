@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -29,31 +29,16 @@ export default function PurchaseModal({
   const [proveedor, setProveedor] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [costo, setCosto] = useState(0);
-  const [fecha, setFecha] = useState("");
-
+  const [fecha, setFecha] = useState(() =>
+    new Date().toISOString().split("T")[0]
+  );
   const [metodoPago, setMetodoPago] = useState("Efectivo");
-
-  const [estado, setEstado] = useState<
-    "Pagada" | "Pendiente"
-  >("Pagada");
-
+  const [estado, setEstado] = useState<"Pagada" | "Pendiente">("Pagada");
   const [observaciones, setObservaciones] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setProducto("");
-      setProveedor("");
-      setCantidad(1);
-      setCosto(0);
-      setFecha(new Date().toISOString().split("T")[0]);
-      setMetodoPago("Efectivo");
-      setEstado("Pagada");
-      setObservaciones("");
-    }
-  }, [open]);
 
   return (
     <Modal
+      key={open ? "purchase-open" : "purchase-closed"}
       open={open}
       title="Nueva compra"
       onClose={onClose}

@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -10,16 +11,18 @@ export default function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-slate-950">
-      <Sidebar />
+    <AuthGuard>
+      <div className="flex min-h-screen bg-slate-950">
+        <Sidebar />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <Topbar />
+        <div className="flex flex-col flex-1 min-w-0">
+          <Topbar />
 
-        <main className="flex-1 min-w-0 p-8 text-white overflow-x-hidden">
-          {children}
-        </main>
+          <main className="flex-1 min-w-0 p-8 text-white overflow-x-auto">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

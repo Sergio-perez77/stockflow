@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import BusinessSettings from "@/components/dashboard/BusinessSettings";
-import link from "next/link";
-
 
 export default function ConfiguracionPage() {
 

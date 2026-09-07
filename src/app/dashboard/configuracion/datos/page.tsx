@@ -1,10 +1,13 @@
 "use client";
 
-import { existeProducto } from "@/lib/detectarDuplicados";
-
 import { generarCodigo } from "@/lib/generadorCodigos";
 
-import { useEffect, useState } from "react";
+import {
+  convertirNumero,
+  obtenerNumero,
+} from "@/lib/numeros";
+
+import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 
 import {
@@ -16,6 +19,8 @@ import {
 } from "@/lib/storage";
 
 import type { Venta } from "@/types/venta";
+
+import type { Cliente } from "@/types/cliente";
 
 type FilaImportada = Record<string, unknown>;
 
@@ -36,13 +41,26 @@ type TipoDatos =
 type MapeoColumnas = Record<string, string>;
 
 export default function DatosPage() {
+  const leerImportacionPendiente = (): ImportacionPendiente | null => {
+    if (typeof window === "undefined") return null;
+
+    return cargarImportacion<ImportacionPendiente>("importacion_pendiente");
+  };
+
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [filas, setFilas] = useState<FilaImportada[]>([]);
-  const [columnas, setColumnas] = useState<string[]>([]);
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
+  const [filas, setFilas] = useState<FilaImportada[]>(() =>
+    leerImportacionPendiente()?.filas ?? []
+  );
+  const [columnas, setColumnas] = useState<string[]>(() =>
+    leerImportacionPendiente()?.columnas ?? []
+  );
   const [error, setError] = useState("");
 
   const [importacionPendiente, setImportacionPendiente] =
-  useState<ImportacionPendiente | null>(null);
+    useState<ImportacionPendiente | null>(() =>
+      leerImportacionPendiente()
+    );
 
   const [mostrarMapeo, setMostrarMapeo] = useState(false);
   const [tipoDatos, setTipoDatos] = useState<
@@ -52,12 +70,17 @@ export default function DatosPage() {
   const [tipoDatosManual, setTipoDatosManual] =
   useState<TipoDatos | null>(null);
 
+  const [tipoPlantilla, setTipoPlantilla] =
+  useState<TipoDatos>("productos");
+
   const [mapeoColumnas, setMapeoColumnas] =
   useState<MapeoColumnas>({});
 
   const [erroresMapeo, setErroresMapeo] = useState<string[]>([]);
 
   const [importacionValidada, setImportacionValidada] = useState(false);
+  const [ejemplosDuplicados, setEjemplosDuplicados] = useState<string[]>([]);
+  const [clientesNuevosContar, setClientesNuevosContar] = useState<number>(0);
 
   function generarIdsImportacion(
   tipo: string,
@@ -87,37 +110,89 @@ export default function DatosPage() {
 }
 
 
-  function convertirNumero(valor: unknown): number {
+  function normalizarFechaImportada(
+  valor: unknown
+): string | null {
   if (typeof valor === "number") {
-    return Number.isNaN(valor) ? 0 : valor;
+    const fechaExcel = XLSX.SSF.parse_date_code(valor);
+
+    if (!fechaExcel) {
+      return null;
+    }
+
+    const mes = String(fechaExcel.m).padStart(2, "0");
+    const dia = String(fechaExcel.d).padStart(2, "0");
+
+    return `${fechaExcel.y}-${mes}-${dia}`;
   }
 
-  if (typeof valor === "string") {
-    const numero = Number(
-      valor
-        .replace("$", "")
-        .replace(",", ".")
-        .trim()
-    );
+  const texto = String(valor ?? "").trim();
 
-    return Number.isNaN(numero) ? 0 : numero;
+  if (!texto) {
+    return null;
   }
 
-  return 0;
+  const fechaIso = texto.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+  );
+
+  if (fechaIso) {
+    const [, anio, mes, dia] = fechaIso;
+
+    return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+  }
+
+  const fechaLatina = texto.match(
+    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/
+  );
+
+  if (fechaLatina) {
+    const [, dia, mes, anio] = fechaLatina;
+
+    return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+  }
+
+  return null;
 }
 
-  useEffect(() => {
-  const pendiente =
-    cargarImportacion<ImportacionPendiente>(
-      "importacion_pendiente"
-    );
+  function normalizarEstadoVenta(
+  valor: unknown
+): Venta["estado"] {
+  const estado = String(valor ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
-  if (!pendiente) return;
+  if (estado === "pendiente") {
+    return "Pendiente";
+  }
 
-  setImportacionPendiente(pendiente);
-  setFilas(pendiente.filas);
-  setColumnas(pendiente.columnas);
-}, []);
+  if (estado === "anulada" || estado === "anulado") {
+    return "Anulada";
+  }
+
+  return "Pagada";
+}
+
+  function limpiarImportacion() {
+  eliminarImportacion("importacion_pendiente");
+
+  setImportacionValidada(false);
+  setMostrarMapeo(false);
+  setImportacionPendiente(null);
+  setFilas([]);
+  setColumnas([]);
+  setMapeoColumnas({});
+  setErroresMapeo([]);
+  setTipoDatos(null);
+  setTipoDatosManual(null);
+  setArchivo(null);
+  if (inputArchivoRef.current) {
+  inputArchivoRef.current.value = "";
+}
+  setError("");
+}
 
 
 const camposStockFlow: Record<
@@ -162,6 +237,63 @@ const camposStockFlow: Record<
   ],
 };
 
+  function descargarPlantilla(tipo: TipoDatos) {
+  const ejemplos: Record<TipoDatos, Record<string, string | number>> = {
+    productos: {
+      codigo: "PROD-001",
+      sku: "SKU-001",
+      nombre: "Producto de ejemplo",
+      categoria: "General",
+      stock: 10,
+      stockMinimo: 2,
+      costo: 1000,
+      precio: 1500,
+    },
+    clientes: {
+      codigo: "CLI-001",
+      nombre: "Cliente de ejemplo",
+      dni: "30123456",
+      telefono: "1122334455",
+      email: "cliente@ejemplo.com",
+    },
+    proveedores: {
+      empresa: "Proveedor de ejemplo",
+      contacto: "Ana Pérez",
+      telefono: "1122334455",
+      email: "proveedor@ejemplo.com",
+    },
+    ventas: {
+      codigo: "VTA-001",
+      cliente: "Cliente de ejemplo",
+      fecha: "2026-08-21",
+      metodoPago: "Efectivo",
+      estado: "Pagada",
+      total: 1500,
+    },
+  };
+
+  const columnasPlantilla = camposStockFlow[tipo];
+
+  const hoja = XLSX.utils.aoa_to_sheet([
+    columnasPlantilla,
+    columnasPlantilla.map(
+      (campo) => ejemplos[tipo][campo] ?? ""
+    ),
+  ]);
+
+  const libro = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    libro,
+    hoja,
+    tipo.charAt(0).toUpperCase() + tipo.slice(1)
+  );
+
+  XLSX.writeFile(
+    libro,
+    `plantilla-stockflow-${tipo}.xlsx`
+  );
+}
 
   function detectarTipoDatos(
   columnas: string[]
@@ -247,14 +379,16 @@ const camposStockFlow: Record<
   return null;
 }
 
-  function continuarImportacion() {
+  function continuarImportacion(tipoForzado?: TipoDatos) {
   if (!importacionPendiente) return;
 
-  const tipoDetectado = detectarTipoDatos(
-    importacionPendiente.columnas
-  );
+  const tipoDetectado =
+    tipoForzado ??
+    detectarTipoDatos(importacionPendiente.columnas);
 
   setTipoDatos(tipoDetectado);
+  setErroresMapeo([]);
+  setImportacionValidada(false);
 
   if (tipoDetectado) {
     const campos = camposStockFlow[tipoDetectado];
@@ -329,7 +463,7 @@ const camposStockFlow: Record<
         "venta",
       ],
 
-      documento: [
+      dni: [
         "dni",
         "documento",
         "documento cliente",
@@ -448,6 +582,339 @@ const camposStockFlow: Record<
   setMostrarMapeo(true);
 }
 
+  function validarEmail(email: string): boolean {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
+
+  function validarTelefono(tel: string): boolean {
+    const soloDigitos = String(tel ?? "").replace(/[^0-9]/g, "");
+    return soloDigitos.length >= 7 && soloDigitos.length <= 15;
+  }
+
+  function contarClientesNuevos(): number {
+    if (tipoDatos !== "ventas" || !importacionPendiente) return 0;
+    const clientesExistentes = cargarDatos<Cliente>("clientes");
+    const nombresExistentes = new Set(
+      clientesExistentes.map((c) => c.nombre.trim().toLowerCase())
+    );
+    let faltantes = 0;
+    importacionPendiente.filas.forEach((fila) => {
+      const nombre = String(fila[mapeoColumnas.cliente] ?? "").trim();
+      if (!nombre) return;
+      if (!nombresExistentes.has(nombre.toLowerCase())) faltantes++;
+    });
+    setClientesNuevosContar(faltantes);
+    return faltantes;
+  }
+
+  function validarFilasImportacion(): string[] {
+  if (!tipoDatos || !importacionPendiente) {
+    return [];
+  }
+
+  const camposObligatorios: Record<TipoDatos, string[]> = {
+    productos: ["nombre", "stock", "precio"],
+    clientes: ["nombre"],
+    proveedores: ["empresa"],
+    ventas: ["cliente", "fecha", "total"],
+  };
+
+  const errores: string[] = [];
+  let totalErrores = 0;
+
+  importacionPendiente.filas.forEach((fila, indice) => {
+    camposObligatorios[tipoDatos].forEach((campo) => {
+      const columnaOrigen = mapeoColumnas[campo];
+      const valor = columnaOrigen ? fila[columnaOrigen] : "";
+
+      if (String(valor ?? "").trim()) {
+        return;
+      }
+
+      totalErrores++;
+
+      if (errores.length < 10) {
+        errores.push(
+          `Fila ${indice + 2}: el campo "${campo}" está vacío.`
+        );
+      }
+    });
+  });
+
+  // Validaciones específicas de formato (email / teléfono)
+  importacionPendiente.filas.forEach((fila, indice) => {
+    if (tipoDatos === "clientes" || tipoDatos === "proveedores") {
+      const columnaEmail = mapeoColumnas.email;
+      const columnaTelefono = mapeoColumnas.telefono;
+
+      const valorEmail = columnaEmail
+        ? String(fila[columnaEmail] ?? "").trim()
+        : "";
+
+      if (valorEmail && !validarEmail(valorEmail) && errores.length < 10) {
+        errores.push(
+          `Fila ${indice + 2}: el campo "email" tiene un formato inválido.`
+        );
+      }
+
+      const valorTel = columnaTelefono
+        ? String(fila[columnaTelefono] ?? "").trim()
+        : "";
+
+      if (valorTel && !validarTelefono(valorTel) && errores.length < 10) {
+        errores.push(
+          `Fila ${indice + 2}: el campo "telefono" tiene un formato inválido.`
+        );
+      }
+    }
+  });
+
+  if (totalErrores > errores.length) {
+    errores.push(
+      `Hay ${totalErrores - errores.length} errores adicionales.`
+    );
+  }
+
+  return errores;
+}
+
+
+  function validarNumerosImportacion(): string[] {
+  if (!tipoDatos || !importacionPendiente) {
+    return [];
+  }
+
+  const camposNumericos: Partial<Record<TipoDatos, string[]>> = {
+    productos: ["stock", "stockMinimo", "costo", "precio"],
+    ventas: ["total"],
+  };
+
+  const errores: string[] = [];
+
+  importacionPendiente.filas.forEach((fila, indice) => {
+    (camposNumericos[tipoDatos] ?? []).forEach((campo) => {
+      const columnaOrigen = mapeoColumnas[campo];
+
+      if (!columnaOrigen) {
+        return;
+      }
+
+      const valor = fila[columnaOrigen];
+
+      if (
+        String(valor ?? "").trim() &&
+        obtenerNumero(valor) === null &&
+        errores.length < 10
+      ) {
+        errores.push(
+          `Fila ${indice + 2}: "${campo}" debe ser un número válido.`
+        );
+      }
+    });
+  });
+
+  return errores;
+}
+
+  function validarRangosNumericos(): string[] {
+  if (!tipoDatos || !importacionPendiente) {
+    return [];
+  }
+
+  const camposSinNegativos: Partial<
+    Record<TipoDatos, string[]>
+  > = {
+    productos: [
+      "stock",
+      "stockMinimo",
+      "costo",
+      "precio",
+    ],
+    ventas: ["total"],
+  };
+
+  const errores: string[] = [];
+
+  importacionPendiente.filas.forEach((fila, indice) => {
+    (camposSinNegativos[tipoDatos] ?? []).forEach(
+      (campo) => {
+        const columnaOrigen = mapeoColumnas[campo];
+
+        if (!columnaOrigen) {
+          return;
+        }
+
+        const valor = fila[columnaOrigen];
+
+        if (!String(valor ?? "").trim()) {
+          return;
+        }
+
+        const numero = obtenerNumero(valor);
+
+        if (numero !== null) {
+          if (numero < 0 && errores.length < 10) {
+            errores.push(
+              `Fila ${indice + 2}: "${campo}" no puede ser negativo.`
+            );
+          }
+
+          // Algunos campos deben ser mayores que cero
+          if (
+            (campo === "precio" || campo === "costo" || campo === "total") &&
+            numero <= 0 &&
+            errores.length < 10
+          ) {
+            errores.push(
+              `Fila ${indice + 2}: "${campo}" debe ser mayor que cero.`
+            );
+          }
+        }
+      }
+    );
+  });
+
+  return errores;
+}
+
+
+  function validarClientesDeVentas(): string[] {
+  if (tipoDatos !== "ventas" || !importacionPendiente) {
+    return [];
+  }
+
+  // Cuando se importa una venta, si el cliente no existe se crea
+  // automáticamente para no bloquear una carga válida del negocio.
+  return [];
+}
+
+  function generarClavesDuplicadas(
+    valores: Array<string | undefined>
+  ): string[] {
+    return valores
+      .map((valor) =>
+        String(valor ?? "")
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+      )
+      .filter(Boolean);
+  }
+
+  function obtenerClavesDuplicadasPorTipo(
+    tipo: TipoDatos,
+    registro: Record<string, unknown>
+  ): string[] {
+    if (tipo === "productos") {
+      return generarClavesDuplicadas([
+        String(registro.sku ?? registro.codigo ?? ""),
+      ]);
+    }
+
+    if (tipo === "clientes") {
+      return generarClavesDuplicadas([
+        String(registro.dni ?? ""),
+        String(registro.email ?? ""),
+        String(registro.nombre ?? ""),
+      ]);
+    }
+
+    if (tipo === "proveedores") {
+      return generarClavesDuplicadas([
+        String(registro.empresa ?? ""),
+        String(registro.contacto ?? ""),
+        String(registro.email ?? ""),
+        String(registro.telefono ?? ""),
+      ]);
+    }
+
+    return generarClavesDuplicadas([
+      String(registro.codigo ?? ""),
+      String(registro.cliente ?? ""),
+      String(registro.fecha ?? ""),
+    ]);
+  }
+
+  function calcularEjemplosDuplicados() {
+    if (!tipoDatos || !importacionPendiente) return;
+
+    const datosExistentes = cargarDatos<Record<string, unknown>>(tipoDatos);
+
+    const obtenerClaveRegistro = (
+      fila: Record<string, unknown>
+    ) => {
+      if (tipoDatos === "productos") {
+        return String(
+          fila[mapeoColumnas.sku] ?? fila[mapeoColumnas.codigo] ?? ""
+        )
+          .trim()
+          .toLowerCase();
+      }
+
+      return obtenerClavesDuplicadasPorTipo(
+        tipoDatos,
+        {
+          ...fila,
+          sku: fila[mapeoColumnas.sku],
+          codigo: fila[mapeoColumnas.codigo],
+          empresa: fila[mapeoColumnas.empresa],
+          contacto: fila[mapeoColumnas.contacto],
+          email: fila[mapeoColumnas.email],
+          telefono: fila[mapeoColumnas.telefono],
+          dni: fila[mapeoColumnas.dni],
+          nombre: fila[mapeoColumnas.nombre],
+          cliente: fila[mapeoColumnas.cliente],
+          fecha: fila[mapeoColumnas.fecha],
+        }
+      ).join("|");
+    };
+
+    const clavesExistentes = new Set<string>();
+    datosExistentes.forEach((ex) => {
+      const clave = String(
+        (ex as Record<string, any>).sku ?? (ex as Record<string, any>).codigo ?? ""
+      )
+        .trim()
+        .toLowerCase();
+
+      if (clave) clavesExistentes.add(clave);
+    });
+
+    const ejemplos: string[] = [];
+
+    importacionPendiente.filas.forEach((fila) => {
+      const clave = obtenerClaveRegistro(fila);
+
+      if (!clave) return;
+
+      if (clavesExistentes.has(clave)) {
+        if (!ejemplos.includes(clave)) ejemplos.push(clave);
+      }
+    });
+
+    setEjemplosDuplicados(ejemplos);
+  }
+
+    function descargarDuplicadosCSV() {
+      if (typeof window === "undefined") return;
+      if (!ejemplosDuplicados || ejemplosDuplicados.length === 0) return;
+
+      const filas = ejemplosDuplicados.map((clave, idx) => `${idx + 1},"${clave.replace(/"/g, '""') }"`).join("\n");
+      const csv = `id,clave\n${filas}`;
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `duplicados-${tipoDatos}-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
  function validarMapeo(): boolean {
   if (!tipoDatos) {
     setErroresMapeo([
@@ -477,6 +944,7 @@ const camposStockFlow: Record<
   ],
 
   ventas: [
+    "cliente",
     "fecha",
     "total",
   ],
@@ -512,6 +980,51 @@ const camposStockFlow: Record<
     );
   });
 
+  errores.push(...validarFilasImportacion());
+  errores.push(...validarNumerosImportacion());
+  errores.push(...validarRangosNumericos());
+  errores.push(...validarClientesDeVentas());
+  // Contar clientes nuevos (info, no bloqueante)
+  try {
+    contarClientesNuevos();
+  } catch (e) {
+    console.error(e);
+  }
+  if (tipoDatos === "ventas") {
+  importacionPendiente?.filas.forEach((fila, indice) => {
+    const columnaFecha = mapeoColumnas.fecha;
+    const valorFecha = columnaFecha
+      ? fila[columnaFecha]
+      : "";
+
+    if (String(valorFecha ?? "").trim()) {
+      const fechaNorm = normalizarFechaImportada(valorFecha);
+
+      if (!fechaNorm) {
+        errores.push(
+          `Fila ${indice + 2}: la fecha no tiene un formato válido.`
+        );
+        return;
+      }
+
+      // No permitir fechas futuras
+      try {
+        const fechaObj = new Date(fechaNorm + "T00:00:00Z");
+        const hoy = new Date();
+        // comparar solo fecha (sin hora)
+        const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        if (fechaObj.getTime() > hoySinHora.getTime()) {
+          errores.push(
+            `Fila ${indice + 2}: la fecha no puede ser mayor a la fecha actual.`
+          );
+        }
+      } catch (e) {
+        // si la conversión falla, no bloquear por esto aquí
+      }
+    }
+  });
+}
+
   setErroresMapeo(errores);
 
   if (errores.length > 0) {
@@ -520,27 +1033,18 @@ const camposStockFlow: Record<
   }
 
   setImportacionValidada(true);
+  // Calcular ejemplos de duplicados para mostrar en la UI
+  try {
+    calcularEjemplosDuplicados();
+  } catch (e) {
+    // no bloquear la validación por errores en cálculo de ejemplos
+    console.error(e);
+  }
 
   return true;
 }
 
-  function generarIdImportacion(tipo: string) {
-  const datosExistentes = cargarDatos<{ id: number }>(tipo);
-
-  const idsExistentes = new Set(
-    datosExistentes.map((dato) => dato.id)
-  );
-
-  let id = Date.now();
-
-  while (idsExistentes.has(id)) {
-    id++;
-  }
-
-  return id;
-}
-
-  function importarDatos() {
+  function importarDatos(forceImport = false) {
   if (!tipoDatos || !importacionPendiente) {
     return;
   }
@@ -555,6 +1059,57 @@ const camposStockFlow: Record<
 );
 
   if (tipoDatos === "ventas") {
+    const clientesExistentes = cargarDatos<Cliente>("clientes");
+    const clientesPorNombre = new Map(
+      clientesExistentes.map((cliente) => [
+        cliente.nombre.trim().toLowerCase(),
+        cliente,
+      ])
+    );
+
+    const clientesNuevos: Cliente[] = [];
+
+    importacionPendiente.filas.forEach((fila) => {
+      const nombreCliente = String(
+        fila[mapeoColumnas.cliente] ?? ""
+      ).trim();
+
+      if (!nombreCliente) {
+        return;
+      }
+
+      const claveCliente = nombreCliente.toLowerCase();
+
+      if (clientesPorNombre.has(claveCliente)) {
+        return;
+      }
+
+      const [nuevoId] = generarIdsImportacion(
+        "clientes",
+        1
+      );
+
+      const clienteNuevo: Cliente = {
+        id: nuevoId,
+        codigo: generarCodigo(
+          "CLI",
+          clientesExistentes.map((cliente) => cliente.codigo)
+        ),
+        nombre: nombreCliente,
+        dni: "",
+        email: "",
+        telefono: "",
+      };
+
+      clientesExistentes.push(clienteNuevo);
+      clientesPorNombre.set(claveCliente, clienteNuevo);
+      clientesNuevos.push(clienteNuevo);
+    });
+
+    if (clientesNuevos.length > 0) {
+      guardarDatos("clientes", clientesExistentes);
+    }
+
     const codigosVentas = cargarDatos<{
       codigo?: string;
     }>("ventas")
@@ -583,41 +1138,34 @@ const camposStockFlow: Record<
           );
 
         const fecha =
-          String(
-            fila[mapeoColumnas.fecha] ?? ""
-          );
+        normalizarFechaImportada(
+          fila[mapeoColumnas.fecha]
+        ) ?? "";
 
         const metodoPago =
           String(
             fila[mapeoColumnas.metodoPago] ?? ""
           );
 
-        const estadoOrigen =
-          String(
-            fila[mapeoColumnas.estado] ?? "Pagada"
-          );
+        const estado = normalizarEstadoVenta(
+          fila[mapeoColumnas.estado]
+        );
 
-        const estado: Venta["estado"] =
-          estadoOrigen === "Pendiente" ||
-          estadoOrigen === "Anulada"
-            ? estadoOrigen
-            : "Pagada";
-
-        const total =
-          Number(
-            fila[mapeoColumnas.total] ?? 0
-          );
+        const total = convertirNumero(
+          fila[mapeoColumnas.total]
+        );
 
         return {
           id: idsImportacion[indice],
 
           codigo,
 
-          cliente,
+          cliente: String(cliente ?? "").trim(),
+
 
           fecha,
 
-          metodoPago,
+          metodoPago: String(metodoPago ?? "").trim(),
 
           estado,
 
@@ -625,9 +1173,7 @@ const camposStockFlow: Record<
 
           items: [],
 
-          total: Number.isNaN(total)
-            ? 0
-            : total,
+          total,
         };
       });
 
@@ -642,22 +1188,14 @@ const camposStockFlow: Record<
       ]
     );
 
-    eliminarImportacion(
-      "importacion_pendiente"
-    );
-
-    setImportacionValidada(false);
-    setMostrarMapeo(false);
-    setImportacionPendiente(null);
-    setFilas([]);
-    setColumnas([]);
-    setMapeoColumnas({});
-    setErroresMapeo([]);
-    setTipoDatos(null);
-    setArchivo(null);
+    limpiarImportacion();
 
     alert(
-      `Importación completada. Se importaron ${ventasImportadas.length} ventas.`
+      `Importación completada. Se importaron ${ventasImportadas.length} ventas.${
+        clientesNuevos.length > 0
+          ? ` Se crearon ${clientesNuevos.length} clientes nuevos.`
+          : ""
+      }`
     );
 
     return;
@@ -764,14 +1302,14 @@ const camposStockFlow: Record<
       if (tipoDatos === "productos") {
             return {
               id: idsImportacion[indice],
-              codigo: String(registro.codigo ?? ""),
-              sku: String(registro.sku ?? ""),
-              nombre: String(registro.nombre ?? ""),
-              categoria: String(registro.categoria ?? ""),
+              codigo: String(registro.codigo ?? "").trim(),
+              sku: String(registro.sku ?? "").trim(),
+              nombre: String(registro.nombre ?? "").trim(),
+              categoria: String(registro.categoria ?? "").trim(),
               stock: convertirNumero(registro.stock),
               stockMinimo: convertirNumero(registro.stockMinimo),
-              costo: String(registro.costo ?? ""),
-              precio: String(registro.precio ?? ""),
+              costo: String(registro.costo ?? "").trim(),
+              precio: String(registro.precio ?? "").trim(),
             };
           }
 
@@ -779,21 +1317,21 @@ const camposStockFlow: Record<
           if (tipoDatos === "clientes") {
             return {
               id: idsImportacion[indice],
-              codigo: String(registro.codigo ?? ""),
-              nombre: String(registro.nombre ?? ""),
-              dni: String(registro.dni ?? ""),
-              email: String(registro.email ?? ""),
-              telefono: String(registro.telefono ?? ""),
+              codigo: String(registro.codigo ?? "").trim(),
+              nombre: String(registro.nombre ?? "").trim(),
+              dni: String(registro.dni ?? "").trim(),
+              email: String(registro.email ?? "").trim(),
+              telefono: String(registro.telefono ?? "").trim(),
             };
           }
 
           if (tipoDatos === "proveedores") {
             return {
               id: idsImportacion[indice],
-              empresa: String(registro.empresa ?? ""),
-              contacto: String(registro.contacto ?? ""),
-              email: String(registro.email ?? ""),
-              telefono: String(registro.telefono ?? ""),
+              empresa: String(registro.empresa ?? "").trim(),
+              contacto: String(registro.contacto ?? "").trim(),
+              email: String(registro.email ?? "").trim(),
+              telefono: String(registro.telefono ?? "").trim(),
             };
           }
 
@@ -811,20 +1349,207 @@ const camposStockFlow: Record<
     let registrosFinales = registrosImportados;
     let registrosDuplicados = 0;
 
+    if (!forceImport) {
+
     if (tipoDatos === "productos") {
-      const nuevosProductos = registrosImportados.filter(
-        (producto) =>
-          !existeProducto(
-            datosExistentes,
-            producto
-          )
-      );
+    const skusRegistrados = new Set(
+      datosExistentes
+        .map((producto) =>
+          String(producto.sku ?? "").trim().toLowerCase()
+        )
+        .filter(Boolean)
+    );
 
-      registrosDuplicados =
-        registrosImportados.length -
-        nuevosProductos.length;
+    const nuevosProductos = registrosImportados.filter(
+      (producto) => {
+        const sku = String(producto.sku ?? "")
+          .trim()
+          .toLowerCase();
 
-      registrosFinales = nuevosProductos;
+        // Un producto sin SKU no se considera duplicado.
+        if (!sku) {
+          return true;
+        }
+
+        if (skusRegistrados.has(sku)) {
+          return false;
+        }
+
+        skusRegistrados.add(sku);
+        return true;
+      }
+    );
+
+  registrosDuplicados =
+    registrosImportados.length -
+    nuevosProductos.length;
+
+  registrosFinales = nuevosProductos;
+}
+
+    if (tipoDatos === "clientes") {
+      const clientesRegistrados = new Set<string>();
+
+      datosExistentes.forEach((cliente) => {
+        const claves = generarClavesDuplicadas([
+          String(cliente.dni ?? ""),
+          String(cliente.email ?? ""),
+          String(cliente.nombre ?? ""),
+        ]);
+
+        claves.forEach((clave) => clientesRegistrados.add(clave));
+      });
+
+      const clientesNuevos = registrosImportados.filter((cliente) => {
+        const claves = generarClavesDuplicadas([
+          String(cliente.dni ?? ""),
+          String(cliente.email ?? ""),
+          String(cliente.nombre ?? ""),
+        ]);
+
+        if (claves.length === 0) {
+          return true;
+        }
+
+        const hayDuplicado = claves.some((clave) =>
+          clientesRegistrados.has(clave)
+        );
+
+        if (hayDuplicado) {
+          return false;
+        }
+
+        claves.forEach((clave) => clientesRegistrados.add(clave));
+        return true;
+      });
+
+      registrosDuplicados = registrosImportados.length - clientesNuevos.length;
+      registrosFinales = clientesNuevos;
+    }
+
+    if (tipoDatos === "proveedores") {
+      const proveedoresRegistrados = new Set<string>();
+
+      datosExistentes.forEach((proveedor) => {
+        const claves = obtenerClavesDuplicadasPorTipo("proveedores", {
+          empresa: proveedor.empresa,
+          contacto: proveedor.contacto,
+          email: proveedor.email,
+          telefono: proveedor.telefono,
+        });
+
+        claves.forEach((clave) => proveedoresRegistrados.add(clave));
+      });
+
+      const proveedoresNuevos = registrosImportados.filter((proveedor) => {
+        const claves = obtenerClavesDuplicadasPorTipo("proveedores", {
+          empresa: proveedor.empresa,
+          contacto: proveedor.contacto,
+          email: proveedor.email,
+          telefono: proveedor.telefono,
+        });
+
+        if (claves.length === 0) {
+          return true;
+        }
+
+        const hayDuplicado = claves.some((clave) =>
+          proveedoresRegistrados.has(clave)
+        );
+
+        if (hayDuplicado) {
+          return false;
+        }
+
+        claves.forEach((clave) => proveedoresRegistrados.add(clave));
+        return true;
+      });
+
+      registrosDuplicados = registrosImportados.length - proveedoresNuevos.length;
+      registrosFinales = proveedoresNuevos;
+    }
+
+      } else {
+        // forceImport === true: no filtrado, todos los registros se importan
+        registrosFinales = registrosImportados;
+        registrosDuplicados = 0;
+      }
+
+      // Generar ejemplos de duplicados para mostrar al usuario
+    const obtenerClaveRegistro = (
+      registro: Record<string, any>,
+      tipo: TipoDatos
+    ) => {
+      if (tipo === "productos") {
+        return String(registro.sku ?? registro.codigo ?? "")
+          .trim()
+          .toLowerCase();
+      }
+
+      if (tipo === "clientes") {
+        return generarClavesDuplicadas([
+          String(registro.dni ?? ""),
+          String(registro.email ?? ""),
+          String(registro.nombre ?? ""),
+        ]).join("|");
+      }
+
+      if (tipo === "proveedores") {
+        return obtenerClavesDuplicadasPorTipo("proveedores", {
+          empresa: registro.empresa,
+          contacto: registro.contacto,
+          email: registro.email,
+          telefono: registro.telefono,
+        }).join("|");
+      }
+
+      // ventas
+      return obtenerClavesDuplicadasPorTipo("ventas", {
+        codigo: registro.codigo,
+        cliente: registro.cliente,
+        fecha: registro.fecha,
+      }).join("|");
+    };
+
+    const clavesEncontradas = new Set<string>();
+    const ejemplosDuplicados: string[] = [];
+
+    // Inicializar con claves existentes
+    datosExistentes.forEach((ex) => {
+      const clave = obtenerClaveRegistro(ex as Record<string, any>, tipoDatos);
+
+      if (clave) clavesEncontradas.add(clave);
+    });
+
+    registrosImportados.forEach((reg) => {
+      const clave = obtenerClaveRegistro(reg as Record<string, any>, tipoDatos);
+
+      if (!clave) return;
+
+      if (clavesEncontradas.has(clave)) {
+        if (!ejemplosDuplicados.includes(clave)) {
+          ejemplosDuplicados.push(clave);
+        }
+      } else {
+        clavesEncontradas.add(clave);
+      }
+    });
+
+    const mensajeConfirmacion = [
+      `Se importarán ${registrosFinales.length} registros de ${tipoDatos}.`,
+      registrosDuplicados > 0
+        ? `Se omitirán ${registrosDuplicados} registros duplicados.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const confirmarImportacion = window.confirm(
+      `${mensajeConfirmacion}\n\n¿Deseás continuar?`
+    );
+
+    if (!confirmarImportacion) {
+      return;
     }
 
     guardarDatos(
@@ -835,19 +1560,7 @@ const camposStockFlow: Record<
       ]
     );
 
-  eliminarImportacion(
-    "importacion_pendiente"
-  );
-
-  setImportacionValidada(false);
-  setMostrarMapeo(false);
-  setImportacionPendiente(null);
-  setFilas([]);
-  setColumnas([]);
-  setMapeoColumnas({});
-  setErroresMapeo([]);
-  setTipoDatos(null);
-  setArchivo(null);
+    limpiarImportacion();
 
   alert(
   `Importación completada. Se importaron ${registrosFinales.length} registros.${
@@ -925,6 +1638,134 @@ const camposStockFlow: Record<
     }
   }
   
+  function insertarImportacionEjemplo() {
+    if (typeof window === "undefined") return;
+
+    const ejemplo: ImportacionPendiente = {
+      nombreArchivo: "ejemplo-ventas.xlsx",
+      columnas: ["codigo", "cliente", "fecha", "total"],
+      filas: [
+        { codigo: "VTA-001", cliente: "Cliente A", fecha: "2026-08-25", total: 1500 },
+        { codigo: "VTA-002", cliente: "Cliente B", fecha: "2026-08-24", total: 2000 },
+      ],
+    };
+
+    guardarImportacion("importacion_pendiente", ejemplo);
+    setImportacionPendiente(ejemplo);
+    setFilas(ejemplo.filas);
+    setColumnas(ejemplo.columnas);
+    setArchivo(null);
+    setMostrarMapeo(false);
+    setImportacionValidada(false);
+  }
+  
+    function exportarDatos(tipo: TipoDatos) {
+        const datos = cargarDatos<Record<string, unknown>>(tipo);
+
+        if (datos.length === 0) {
+          alert(`No hay ${tipo} para exportar.`);
+          return;
+        }
+
+        const mapRegistro = (registro: Record<string, any>) => {
+          if (tipo === "productos") {
+            return {
+              id: registro.id,
+              codigo: String(registro.codigo ?? "").trim(),
+              sku: String(registro.sku ?? "").trim(),
+              nombre: String(registro.nombre ?? "").trim(),
+              categoria: String(registro.categoria ?? "").trim(),
+              stock: registro.stock ?? "",
+              stockMinimo: registro.stockMinimo ?? "",
+              costo: String(registro.costo ?? "").trim(),
+              precio: String(registro.precio ?? "").trim(),
+            };
+          }
+
+          if (tipo === "clientes") {
+            return {
+              id: registro.id,
+              codigo: String(registro.codigo ?? "").trim(),
+              nombre: String(registro.nombre ?? "").trim(),
+              dni: String(registro.dni ?? "").trim(),
+              email: String(registro.email ?? "").trim(),
+              telefono: String(registro.telefono ?? "").trim(),
+            };
+          }
+
+          if (tipo === "proveedores") {
+            return {
+              id: registro.id,
+              empresa: String(registro.empresa ?? "").trim(),
+              contacto: String(registro.contacto ?? "").trim(),
+              email: String(registro.email ?? "").trim(),
+              telefono: String(registro.telefono ?? "").trim(),
+            };
+          }
+
+          // ventas
+          return {
+            id: registro.id,
+            codigo: String(registro.codigo ?? "").trim(),
+            cliente: String(registro.cliente ?? "").trim(),
+            fecha: String(registro.fecha ?? "").trim(),
+            metodoPago: String(registro.metodoPago ?? "").trim(),
+            estado: String(registro.estado ?? "").trim(),
+            total: registro.total ?? "",
+            items: JSON.stringify(registro.items ?? []),
+            observaciones: String(registro.observaciones ?? "").trim(),
+          };
+        };
+
+        const datosExportar = datos.map(mapRegistro);
+
+        // Asegurar orden consistente de columnas por tipo
+        const headersByTipo: Record<TipoDatos, string[]> = {
+          productos: [
+            "id",
+            "codigo",
+            "sku",
+            "nombre",
+            "categoria",
+            "stock",
+            "stockMinimo",
+            "costo",
+            "precio",
+          ],
+          clientes: ["id", "codigo", "nombre", "dni", "email", "telefono"],
+          proveedores: ["id", "empresa", "contacto", "email", "telefono"],
+          ventas: [
+            "id",
+            "codigo",
+            "cliente",
+            "fecha",
+            "metodoPago",
+            "estado",
+            "total",
+            "items",
+            "observaciones",
+          ],
+        };
+
+        const headers = headersByTipo[tipo];
+
+        const hoja = XLSX.utils.json_to_sheet(datosExportar, { header: headers });
+        const libro = XLSX.utils.book_new();
+
+        XLSX.utils.book_append_sheet(
+          libro,
+          hoja,
+          tipo.charAt(0).toUpperCase() + tipo.slice(1)
+        );
+
+        const fecha = new Date().toISOString().slice(0, 10);
+
+        XLSX.writeFile(
+          libro,
+          `stockflow-${tipo}-${fecha}.xlsx`
+        );
+      }
+
 
   return (
     <>
@@ -935,6 +1776,61 @@ const camposStockFlow: Record<
       <p className="text-gray-400 mb-8">
         Importá y exportá la información de tu negocio.
       </p>
+
+      <div className="mb-4 text-sm text-slate-400">
+        {typeof window !== 'undefined' && (
+          <div className="flex items-center gap-4">
+            <span className="text-slate-400">Sesión: <span className="text-slate-200">{localStorage.getItem('stockflow_session')}</span></span>
+          </div>
+        )}
+      </div>
+
+      {typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={insertarImportacionEjemplo}
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm border border-emerald-700"
+          >
+            Insertar importación de ejemplo
+          </button>
+        </div>
+      )}
+
+      <div className="mb-4 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (!importacionPendiente) return;
+            setArchivo(null);
+            setFilas(importacionPendiente.filas || []);
+            setColumnas(importacionPendiente.columnas || []);
+            continuarImportacion();
+          }}
+          disabled={!importacionPendiente}
+          className={`inline-flex items-center gap-3 ${importacionPendiente ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-800 text-slate-400 cursor-not-allowed'} px-4 py-2 rounded-lg text-sm`}
+        >
+          <span className="font-semibold">Última importación:</span>
+          <span className="truncate max-w-xs">{importacionPendiente ? importacionPendiente.nombreArchivo : '— ninguna —'}</span>
+          {importacionPendiente && (
+            <span className="text-slate-200 text-xs">{importacionPendiente.columnas.length} columnas • {importacionPendiente.filas.length} registros</span>
+          )}
+        </button>
+
+        {importacionPendiente && (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('¿Deseás eliminar la importación guardada?')) {
+                limpiarImportacion();
+              }
+            }}
+            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm"
+          >
+            Eliminar importación
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
@@ -949,6 +1845,29 @@ const camposStockFlow: Record<
           <p className="text-gray-400 mb-6">
             Importá información desde Excel, CSV u otros archivos.
           </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <select
+              value={tipoPlantilla}
+              onChange={(e) =>
+                setTipoPlantilla(e.target.value as TipoDatos)
+              }
+              className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white"
+            >
+              <option value="productos">Plantilla de productos</option>
+              <option value="clientes">Plantilla de clientes</option>
+              <option value="proveedores">Plantilla de proveedores</option>
+              <option value="ventas">Plantilla de ventas</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => descargarPlantilla(tipoPlantilla)}
+              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-3 rounded-lg font-semibold transition"
+            >
+              Descargar plantilla
+            </button>
+          </div>
 
           <div className="border-2 border-dashed border-slate-700 hover:border-cyan-500 transition rounded-xl p-8 text-center">
 
@@ -969,6 +1888,7 @@ const camposStockFlow: Record<
               Seleccionar archivo
 
               <input
+                ref={inputArchivoRef}
                 type="file"
                 accept=".csv,.xlsx,.xls"
                 onChange={seleccionarArchivo}
@@ -994,10 +1914,26 @@ const camposStockFlow: Record<
 
              <button
               type="button"
-              onClick={continuarImportacion}
+              onClick={() => continuarImportacion()}
               className="mt-4 bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2 rounded-lg font-semibold transition"
             >
               Continuar importación
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "¿Deseás cancelar y descartar esta importación?"
+                  )
+                ) {
+                  limpiarImportacion();
+                }
+              }}
+              className="mt-3 text-sm text-red-400 hover:text-red-300 transition"
+            >
+              Cancelar importación
             </button>
 
             </div>
@@ -1032,6 +1968,7 @@ const camposStockFlow: Record<
 
             <button
               type="button"
+              onClick={() => exportarDatos("productos")}
               className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-5 text-left transition"
             >
               <h3 className="font-semibold text-white">
@@ -1045,6 +1982,7 @@ const camposStockFlow: Record<
 
             <button
               type="button"
+              onClick={() => exportarDatos("clientes")}
               className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-5 text-left transition"
             >
               <h3 className="font-semibold text-white">
@@ -1058,6 +1996,7 @@ const camposStockFlow: Record<
 
             <button
               type="button"
+              onClick={() => exportarDatos("proveedores")}
               className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-5 text-left transition"
             >
               <h3 className="font-semibold text-white">
@@ -1071,6 +2010,7 @@ const camposStockFlow: Record<
 
             <button
               type="button"
+              onClick={() => exportarDatos("ventas")}
               className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-5 text-left transition"
             >
               <h3 className="font-semibold text-white">
@@ -1268,6 +2208,9 @@ const camposStockFlow: Record<
                       ...actual,
                       [campo]: e.target.value,
                     }));
+
+                    setImportacionValidada(false);
+                    setErroresMapeo([]);
                   }}
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white"
                 >
@@ -1348,13 +2291,48 @@ const camposStockFlow: Record<
 
               <button
                 type="button"
-                onClick={importarDatos}
+                onClick={() => importarDatos(false)}
                 className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition"
               >
                 Importar {importacionPendiente?.filas.length || 0} registros
               </button>
 
             </div>
+
+            {ejemplosDuplicados.length > 0 && (
+              <div className="mt-4 bg-yellow-900/10 border border-yellow-700 rounded-lg p-4">
+                <p className="text-yellow-300 text-sm">
+                  Se detectaron {ejemplosDuplicados.length} ejemplos de registros duplicados.
+                </p>
+
+                <div className="mt-2 text-sm text-white max-h-40 overflow-auto">
+                  {ejemplosDuplicados.slice(0, 5).map((e, i) => (
+                    <div key={i} className="py-0.5">• {e}</div>
+                  ))}
+                  {ejemplosDuplicados.length > 5 && (
+                    <div className="text-gray-400">... y {ejemplosDuplicados.length - 5} más</div>
+                  )}
+                </div>
+
+                <div className="mt-3 flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => descargarDuplicadosCSV()}
+                    className="bg-slate-800 text-white px-3 py-2 rounded"
+                  >
+                    Descargar CSV
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => importarDatos(true)}
+                    className="bg-amber-600 text-white px-3 py-2 rounded"
+                  >
+                    Importar incluyendo duplicados
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
         )}
@@ -1384,11 +2362,17 @@ const camposStockFlow: Record<
       <select
         value={tipoDatosManual || ""}
         onChange={(e) => {
-          setTipoDatosManual(
-            e.target.value
-              ? (e.target.value as TipoDatos)
-              : null
-          );
+          const tipoSeleccionado = e.target.value as TipoDatos;
+
+          setTipoDatosManual(tipoSeleccionado || null);
+
+          if (!tipoSeleccionado) {
+            setTipoDatos(null);
+            setMapeoColumnas({});
+            return;
+          }
+
+          continuarImportacion(tipoSeleccionado);
         }}
         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white"
       >

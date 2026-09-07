@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
+import { convertirNumero } from "@/lib/numeros";
+
 import type { Producto } from "@/types/producto";
 import type { Venta } from "@/types/venta";
 
@@ -58,9 +60,6 @@ export default function VentasPage() {
   const [modalComprobante, setModalComprobante] =
   useState(false);
 
-  const [modalDetalleAbierto, setModalDetalleAbierto] =
-  useState(false);
-
   const [filtroEstado, setFiltroEstado] = useState("Todos");
 
   const [filtroMetodoPago, setFiltroMetodoPago] = useState("Todos");
@@ -101,21 +100,20 @@ const cantidadProductos = carrito.reduce(
 const productosDistintos = carrito.length;
 
   function agregarAlCarrito() {
-  if (!productoSeleccionado) {
-    alert("Seleccioná un producto.");
-    return;
+    if (!productoSeleccionado) {
+      alert("Seleccioná un producto.");
+      return;
+    }
 
-  if (cantidad <= 0) {
-  alert("La cantidad debe ser mayor a 0.");
-  return;
-}
-  
-  }
+    if (cantidad <= 0) {
+      alert("La cantidad debe ser mayor a 0.");
+      return;
+    }
 
-  const producto = obtenerProductoPorId(
-    productos,
-    Number(productoSeleccionado)
-  );
+    const producto = obtenerProductoPorId(
+      productos,
+      Number(productoSeleccionado)
+    );
 
   if (!producto) return;
 
@@ -154,22 +152,20 @@ if (existente) {
     )
   );
 } else {
+  const precio = convertirNumero(producto.precio);
+
   setCarrito([
     ...carrito,
     {
       productoId: producto.id,
       producto: producto.nombre,
       cantidad,
-      precio: Number(
-        producto.precio.replace("$", "")
-      ),
-      subtotal:
-        Number(
-          producto.precio.replace("$", "")
-        ) * cantidad,
+      precio,
+      subtotal: precio * cantidad,
     },
   ]);
 }
+
 
   setProductoSeleccionado("");
   setCantidad(1);
@@ -220,17 +216,13 @@ setProductos(nuevosProductos);
 
   
 
-  const nuevaVenta: Venta = {
-    id: Date.now(),
-    codigo: `VTA-${Date.now()}`,
-    cliente: clienteSeleccionado,
-    fecha: new Date().toLocaleDateString().split("T")[0],
-    metodoPago,
-    estado: estadoVenta,
-    observaciones,
-    items: carrito,
-    total: totalCarrito,
-  };
+  const nuevaVenta = crearVenta(
+  clienteSeleccionado,
+  carrito,
+  metodoPago,
+  estadoVenta,
+  observaciones
+);
 
   setVentas([...ventas, nuevaVenta]);
 
@@ -605,256 +597,168 @@ const ventasOrdenadas = [...ventasFiltradas].sort(
     </div>
 
     <div className="mt-10 bg-slate-900 rounded-xl border border-slate-800 p-6 w-full">
+      <h2 className="text-2xl font-bold mb-6">Historial de ventas</h2>
 
-        <h2 className="text-2xl font-bold mb-6">
-          Historial de ventas
-        </h2>
-
-
-        <input
-          type="text"
-          value={buscarVenta}
-          onChange={(e) => setBuscarVenta(e.target.value)}
-          placeholder="Buscar por código, cliente o producto..."
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 mb-6"
-        />
-
-        <div className="flex flex-wrap gap-4 mb-6">
-
-          <select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
-          >
-            <option>Todos</option>
-            <option>Pagada</option>
-            <option>Pendiente</option>
-            <option>Anulada</option>
-          </select>
-
-          <select
-            value={filtroMetodoPago}
-            onChange={(e) =>
-              setFiltroMetodoPago(e.target.value)
-            }
-            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
-          >
-            <option>Todos</option>
-            <option>Efectivo</option>
-            <option>Débito</option>
-            <option>Crédito</option>
-            <option>Transferencia</option>
-            <option>Mercado Pago</option>
-            <option>Cuenta Corriente</option>
-          </select>
-
-          <select
-            value={filtroCliente}
-            onChange={(e) => setFiltroCliente(e.target.value)}
-            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
-          >
-            <option value="Todos">Todos los clientes</option>
-
-            {[...new Set(ventas.map((v) => v.cliente))].map(
-              (cliente) => (
-                <option
-                  key={cliente}
-                  value={cliente}
-                >
-                  {cliente}
-                </option>
-              )
-            )}
-          </select>
-
-          <input
-            type="date"
-            value={filtroFecha}
-            onChange={(e) => setFiltroFecha(e.target.value)}
-            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
-          />
-
-          <select
-            value={ordenVentas}
-            onChange={(e) => setOrdenVentas(e.target.value)}
-            className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
-          >
-            <option>Más reciente</option>
-            <option>Más antigua</option>
-            <option>Mayor importe</option>
-            <option>Menor importe</option>
-          </select>
-
-        </div>
-
-      <div className="max-h-[600px] overflow-y-auto     rounded-lg"></div>
-
-        <table className="w-full table-fixed">
-
-          <thead className="border-b border-slate-700 text-gray-400">
-
-            <tr>
-              <th className="px-2 pb-4 text-left w-[120px]">
-                Cliente
-              </th>
-
-              <th className="px-2 pb-4 text-left w-[90px]">
-                Fecha
-              </th>
-
-              <th className="px-2 pb-4 text-left w-[120px]">
-                Método de pago
-              </th>
-
-              <th className="px-2 pb-4 text-left">
-                Producto
-              </th>
-
-              <th className="px-2 pb-4 text-center w-[70px]">
-                Cantidad
-              </th>
-
-              <th className="px-2 pb-4 text-right w-[90px]">
-                Total
-              </th>
-
-              <th className="px-2 pb-4 text-center w-[90px]">
-                Estado
-              </th>
-
-              <th className="px-2 pb-4 text-center w-[110px]">
-                Acciones
-              </th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {ventasOrdenadas.map((venta) => (
-
-              <tr
-                key={venta.id}
-                className="border-b border-slate-800"
-              >
-
-                <td className="px-4 py-4 w-[180px]">
-                  <div className="truncate">
-                    {venta.cliente}
-                  </div>
-                </td>
-
-                <td className="px-2 py-4 whitespace-nowrap">
-                  {venta.fecha}
-                </td>
-
-                <td className="px-4 py-4 whitespace-nowrap">
-                  {venta.metodoPago}
-                </td>
-
-                <td className="px-4 py-4">
-
-                  {venta.items.length === 1
-                    ? venta.items[0].producto
-                    : `${venta.items.length} productos`}
-
-                </td>
-
-                <td className="text-center">
-                  {venta.items
-                    ? venta.items.reduce(
-                        (total, item) => total + item.cantidad,
-                        0
-                      )
-                    : "-"}
-                </td>
-
-                <td className="px-4 py-4 text-right font-semibold">
-                  ${venta.total}
-                </td>
-
-                <td className="px-4 py-4 text-center">
-                  <span
-                    className={
-                      venta.estado === "Pagada"
-                        ? "text-green-400 font-semibold"
-                        : "text-yellow-400 font-semibold"
-                    }
-                  >
-                    {venta.estado}
-                  </span>
-                </td>
-
-
-
-                <td className="px-4 py-4">
-
-                  <div className="flex flex-col gap-2 items-center">
-
-                    <button
-                      onClick={() => {
-                        setVentaSeleccionada(venta);
-                        setModalComprobante(true);
-                      }}
-                      className="min-w-[110px] bg-cyan-600 hover:bg-cyan-700 px-3 py-1 text-xs rounded-md"
-                    >
-                      Comprobante
-                    </button>
-
-                    {venta.estado !== "Anulada" && (
-                      <button
-                        onClick={() => anularVenta(venta.id)}
-                        className="w-full bg-red-600 hover:bg-red-700 px-2 py-1 text-xs rounded-md"
-                      >
-                        Anular
-                      </button>
-                    )}
-
-                  </div>
-
-                </td>
-
-                
-              </tr>
-
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-
-  
-
-  {modalComprobante && ventaSeleccionada && (
-
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-
-    <div className="bg-slate-900 rounded-xl p-6 max-h-[90vh] overflow-auto">
-
-      <div className="flex justify-end mb-4">
-
-        <button
-          onClick={() => setModalComprobante(false)}
-          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
-        >
-          Cerrar
-        </button>
-
-      </div>
-
-      <ComprobanteVenta
-        venta={ventaSeleccionada}
+      <input
+        type="text"
+        value={buscarVenta}
+        onChange={(e) => setBuscarVenta(e.target.value)}
+        placeholder="Buscar por código, cliente o producto..."
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 mb-6"
       />
 
-    </div>
+      <div className="flex flex-wrap gap-4 mb-6">
+        <select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+          className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+        >
+          <option>Todos</option>
+          <option>Pagada</option>
+          <option>Pendiente</option>
+          <option>Anulada</option>
+        </select>
 
+        <select
+          value={filtroMetodoPago}
+          onChange={(e) => setFiltroMetodoPago(e.target.value)}
+          className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+        >
+          <option>Todos</option>
+          <option>Efectivo</option>
+          <option>Débito</option>
+          <option>Crédito</option>
+          <option>Transferencia</option>
+          <option>Mercado Pago</option>
+          <option>Cuenta Corriente</option>
+        </select>
+
+        <select
+          value={filtroCliente}
+          onChange={(e) => setFiltroCliente(e.target.value)}
+          className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+        >
+          <option value="Todos">Todos los clientes</option>
+
+          {[...new Set(ventas.map((v) => v.cliente))].map((cliente) => (
+            <option key={cliente} value={cliente}>
+              {cliente}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={filtroFecha}
+          onChange={(e) => setFiltroFecha(e.target.value)}
+          className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+        />
+
+        <select
+          value={ordenVentas}
+          onChange={(e) => setOrdenVentas(e.target.value)}
+          className="flex-1 min-w-[180px] bg-slate-800 border border-slate-700 rounded-lg px-4 py-3"
+        >
+          <option>Más reciente</option>
+          <option>Más antigua</option>
+          <option>Mayor importe</option>
+          <option>Menor importe</option>
+        </select>
+      </div>
+
+      <div className="max-h-[600px] overflow-y-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] table-fixed">
+            <thead className="border-b border-slate-700 text-gray-400">
+              <tr>
+                <th className="px-2 pb-4 text-left w-[120px]">Cliente</th>
+                <th className="px-2 pb-4 text-left w-[90px]">Fecha</th>
+                <th className="px-2 pb-4 text-left w-[120px]">Método de pago</th>
+                <th className="px-2 pb-4 text-left">Producto</th>
+                <th className="px-2 pb-4 text-center w-[70px]">Cantidad</th>
+                <th className="px-2 pb-4 text-right w-[90px]">Total</th>
+                <th className="px-2 pb-4 text-center w-[90px]">Estado</th>
+                <th className="px-2 pb-4 text-center w-[110px]">Acciones</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {ventasOrdenadas.map((venta) => (
+                <tr key={venta.id} className="border-b border-slate-800">
+                  <td className="px-4 py-4 w-[180px]">
+                    <div className="truncate">{venta.cliente}</div>
+                  </td>
+                  <td className="px-2 py-4 whitespace-nowrap">{venta.fecha}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{venta.metodoPago}</td>
+                  <td className="px-4 py-4">
+                    {venta.items.length === 1
+                      ? venta.items[0].producto
+                      : `${venta.items.length} productos`}
+                  </td>
+                  <td className="text-center">
+                    {venta.items
+                      ? venta.items.reduce((total, item) => total + item.cantidad, 0)
+                      : "-"}
+                  </td>
+                  <td className="px-4 py-4 text-right font-semibold">${venta.total}</td>
+                  <td className="px-4 py-4 text-center">
+                    <span
+                      className={
+                        venta.estado === "Pagada"
+                          ? "text-green-400 font-semibold"
+                          : "text-yellow-400 font-semibold"
+                      }
+                    >
+                      {venta.estado}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex flex-col gap-2 items-center">
+                      <button
+                        onClick={() => {
+                          setVentaSeleccionada(venta);
+                          setModalComprobante(true);
+                        }}
+                        className="min-w-[110px] bg-cyan-600 hover:bg-cyan-700 px-3 py-1 text-xs rounded-md"
+                      >
+                        Comprobante
+                      </button>
+
+                      {venta.estado !== "Anulada" && (
+                        <button
+                          onClick={() => anularVenta(venta.id)}
+                          className="w-full bg-red-600 hover:bg-red-700 px-2 py-1 text-xs rounded-md"
+                        >
+                          Anular
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
-)}
+  {modalComprobante && ventaSeleccionada && (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div className="bg-slate-900 rounded-xl p-6 max-h-[90vh] overflow-auto">
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => setModalComprobante(false)}
+            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <ComprobanteVenta venta={ventaSeleccionada} />
+      </div>
+    </div>
+  )}
 </>
-  )
+  );
 }

@@ -1,14 +1,13 @@
 import type { Producto } from "@/types/producto";
 import type { Venta, ItemVenta } from "@/types/venta";
 
+import { convertirNumero } from "@/lib/numeros";
+
 export function calcularSubtotal(
   producto: Producto,
   cantidad: number
 ) {
-  return (
-    Number(producto.precio.replace("$", "")) *
-    cantidad
-  );
+  return convertirNumero(producto.precio) * cantidad;
 }
 
 export function hayStock(
@@ -49,35 +48,33 @@ export function crearItemVenta(
   producto: Producto,
   cantidad: number
 ): ItemVenta {
+  const precio = convertirNumero(producto.precio);
+
   return {
     productoId: producto.id,
     producto: producto.nombre,
     cantidad,
-    precio: Number(
-      producto.precio.replace("$", "")
-    ),
-    subtotal: calcularSubtotal(
-      producto,
-      cantidad
-    ),
+    precio,
+    subtotal: precio * cantidad,
   };
 }
 
 export function crearVenta(
   cliente: string,
-  items: ItemVenta[]
+  items: ItemVenta[],
+  metodoPago = "Efectivo",
+  estado: "Pagada" | "Pendiente" = "Pagada",
+  observaciones = ""
 ): Venta {
   return {
     id: Date.now(),
-
     codigo: `VTA-${Date.now()}`,
-
     cliente,
-
     fecha: new Date().toLocaleDateString(),
-
+    metodoPago,
+    estado,
+    observaciones,
     items,
-
     total: calcularTotal(items),
   };
 }

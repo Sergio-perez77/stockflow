@@ -38,22 +38,11 @@ export default function ComprasPage() {
   const [filtroFecha, setFiltroFecha] =
     useState("");
 
-  const [ordenCompras, setOrdenCompras] =
-  useState("Más reciente");
-
   const [compraSeleccionada, setCompraSeleccionada] =
   useState<Compra | null>(null);
 
   const [modalComprobante, setModalComprobante] =
     useState(false);
-
-  const [metodoPago, setMetodoPago] = useState("Efectivo");
-
-  const [estadoCompra, setEstadoCompra] = useState<
-    "Pagada" | "Pendiente"
-  >("Pagada");
-
-  const [observaciones, setObservaciones] = useState(""); 
 
 
   function guardarCompra(compra: Omit<Compra, "id">) {

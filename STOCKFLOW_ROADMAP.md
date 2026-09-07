@@ -18,9 +18,12 @@ SaaS
 - Compras
 - Proveedores
 - Inventario
+- Importación y exportación masiva de datos
+- Datos / backup de negocio
 - Reportes
 - Usuarios
 - Configuración
+- Configuración del negocio
 - Suscripciones
 
 ---

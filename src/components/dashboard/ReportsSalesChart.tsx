@@ -20,24 +20,42 @@ export default function ReportsSalesChart({
   ventas,
 }: Props) {
 
-  const datos = ventas.reduce((acc, venta) => {
+  function normalizarFecha(fecha: string) {
+  if (fecha.includes("-")) {
+    return fecha;
+  }
 
-    const existente = acc.find(
-      (d) => d.fecha === venta.fecha
+  const partes = fecha.split("/");
+
+  if (partes.length !== 3) {
+    return fecha;
+  }
+
+  const [dia, mes, anio] = partes;
+
+  return `${anio}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+}
+
+const datos = ventas
+  .reduce((acumulado, venta) => {
+    const fecha = normalizarFecha(venta.fecha);
+
+    const existente = acumulado.find(
+      (dato) => dato.fecha === fecha
     );
 
     if (existente) {
       existente.total += venta.total;
     } else {
-      acc.push({
-        fecha: venta.fecha,
+      acumulado.push({
+        fecha,
         total: venta.total,
       });
     }
 
-    return acc;
-
-  }, [] as { fecha: string; total: number }[]);
+    return acumulado;
+  }, [] as { fecha: string; total: number }[])
+  .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   return (
 

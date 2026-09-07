@@ -42,18 +42,29 @@ export default function RecentOrders() {
               </td>
             </tr>
           ) : (
-            ventasRecientes.map((venta) => (
-              <tr
-                key={venta.id}
-                className="border-b border-slate-800"
-              >
-                <td className="py-4">#{venta.id}</td>
-                <td>{venta.producto}</td>
-                <td>{venta.cantidad}</td>
-                <td>${venta.total}</td>
-                <td>{venta.fecha}</td>
-              </tr>
-            ))
+            ventasRecientes.map((venta) => {
+              const nombreProducto =
+                venta.items.length === 0
+                  ? "Sin productos"
+                  : venta.items.length === 1
+                    ? venta.items[0].producto
+                    : `${venta.items.length} productos`;
+
+              const cantidadTotal = venta.items.reduce(
+                (total, item) => total + item.cantidad,
+                0
+              );
+
+              return (
+                <tr key={venta.id} className="border-b border-slate-800">
+                  <td className="py-4">#{venta.id}</td>
+                  <td>{nombreProducto}</td>
+                  <td>{cantidadTotal}</td>
+                  <td>${venta.total}</td>
+                  <td>{venta.fecha}</td>
+                </tr>
+              );
+            })
           )}
 
         </tbody>

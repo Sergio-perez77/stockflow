@@ -38,11 +38,20 @@ export default function RecentActivity() {
       descripcion: p.empresa,
     })),
 
-    ...ventas.map((v) => ({
-      id: `venta-${v.id}`,
-      titulo: "Venta registrada",
-      descripcion: `${v.producto} - $${v.total}`,
-    })),
+    ...ventas.map((v) => {
+      const descripcionVenta =
+        v.items.length === 0
+          ? `Cliente: ${v.cliente}`
+          : v.items.length === 1
+            ? v.items[0].producto
+            : `${v.items.length} productos`;
+
+      return {
+        id: `venta-${v.id}`,
+        titulo: "Venta registrada",
+        descripcion: `${descripcionVenta} - $${v.total}`,
+      };
+    }),
   ]
     .reverse()
     .slice(0, 10);
