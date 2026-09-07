@@ -1,7 +1,16 @@
-export type UserRole = "admin" | "gerente" | "vendedor";
-export type SubscriptionPlan = "demo" | "saas" | "erp";
+export type UserRole = "admin" | "gerente" | "vendedor" | "owner" | "user";
+export type ProductType = "stockflow" | "stockflow_plus";
+export type SubscriptionPlan =
+  | "demo"
+  | "saas"
+  | "erp"
+  | "free_trial"
+  | "standard"
+  | "plus";
+export type SubscriptionStatus = "trial" | "active" | "expired" | "suspended";
 export type FeatureKey =
   | "dashboard"
+  | "owner"
   | "productos"
   | "clientes"
   | "usuarios"
@@ -19,6 +28,15 @@ export type SessionUser = {
   email: string;
   role: UserRole;
   plan: SubscriptionPlan;
+  product?: ProductType;
+  company?: string;
+  createdAt?: string;
+  subscriptionStatus?: SubscriptionStatus;
+  trialEnabled?: boolean;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
+  discountPercent?: number;
+  promotionId?: string | null;
   password?: string;
 };
 
@@ -26,45 +44,126 @@ const FEATURE_ACCESS: Record<
   FeatureKey,
   { roles: UserRole[]; plans: SubscriptionPlan[] }
 > = {
-  dashboard: { roles: ["admin", "gerente", "vendedor"], plans: ["demo", "saas", "erp"] },
-  productos: { roles: ["admin", "gerente", "vendedor"], plans: ["demo", "saas", "erp"] },
-  clientes: { roles: ["admin", "gerente", "vendedor"], plans: ["demo", "saas", "erp"] },
-  usuarios: { roles: ["admin", "gerente"], plans: ["saas", "erp"] },
-  suscripciones: { roles: ["admin", "gerente"], plans: ["saas", "erp"] },
-  proveedores: { roles: ["admin", "gerente"], plans: ["saas", "erp"] },
-  compras: { roles: ["admin", "gerente"], plans: ["erp"] },
-  ventas: { roles: ["admin", "gerente", "vendedor"], plans: ["demo", "saas", "erp"] },
-  reportes: { roles: ["admin", "gerente"], plans: ["saas", "erp"] },
-  configuracion: { roles: ["admin", "gerente"], plans: ["saas", "erp"] },
-  categorias: { roles: ["admin", "gerente"], plans: ["saas", "erp"] },
+  dashboard: { roles: ["admin", "gerente", "vendedor", "owner", "user"], plans: ["demo", "saas", "erp", "free_trial", "standard", "plus"] },
+  owner: { roles: ["owner"], plans: ["demo", "saas", "erp", "free_trial", "standard", "plus"] },
+  productos: { roles: ["admin", "gerente", "vendedor", "owner"], plans: ["demo", "saas", "erp", "free_trial", "standard", "plus"] },
+  clientes: { roles: ["admin", "gerente", "vendedor", "owner"], plans: ["demo", "saas", "erp", "free_trial", "standard", "plus"] },
+  usuarios: { roles: ["admin", "gerente", "owner"], plans: ["saas", "erp", "standard", "plus"] },
+  suscripciones: { roles: ["admin", "gerente", "owner"], plans: ["saas", "erp", "standard", "plus"] },
+  proveedores: { roles: ["admin", "gerente", "owner"], plans: ["saas", "erp", "standard", "plus"] },
+  compras: { roles: ["admin", "gerente", "owner"], plans: ["erp", "standard", "plus"] },
+  ventas: { roles: ["admin", "gerente", "vendedor", "owner"], plans: ["demo", "saas", "erp", "free_trial", "standard", "plus"] },
+  reportes: { roles: ["admin", "gerente", "owner"], plans: ["saas", "erp", "standard", "plus"] },
+  configuracion: { roles: ["admin", "gerente", "owner"], plans: ["saas", "erp", "standard", "plus"] },
+  categorias: { roles: ["admin", "gerente", "owner"], plans: ["saas", "erp", "standard", "plus"] },
 };
 
 export const SESSION_KEY = "stockflow_session";
 export const USERS_KEY = "stockflow_users";
+const VALID_ROLES: UserRole[] = ["admin", "gerente", "vendedor", "owner", "user"];
+const VALID_PLANS: SubscriptionPlan[] = ["demo", "saas", "erp", "free_trial", "standard", "plus"];
+const VALID_PRODUCTS: ProductType[] = ["stockflow", "stockflow_plus"];
+const VALID_SUBSCRIPTION_STATUS: SubscriptionStatus[] = ["trial", "active", "expired", "suspended"];
+
+function normalizeRole(role?: UserRole | string): UserRole {
+  const normalized = String(role ?? "user").trim().toLowerCase();
+  return VALID_ROLES.includes(normalized as UserRole) ? (normalized as UserRole) : "user";
+}
+
+function normalizeProduct(product?: ProductType | string): ProductType {
+  const normalized = String(product ?? "stockflow").trim().toLowerCase();
+  return VALID_PRODUCTS.includes(normalized as ProductType) ? (normalized as ProductType) : "stockflow";
+}
+
+function normalizePlan(plan?: SubscriptionPlan | string): SubscriptionPlan {
+  const normalized = String(plan ?? "standard").trim().toLowerCase();
+
+  if (normalized === "free-trial") return "free_trial";
+  if (normalized === "plus") return "plus";
+  if (normalized === "standard") return "standard";
+  if (normalized === "demo") return "demo";
+  if (normalized === "saas") return "saas";
+  if (normalized === "erp") return "erp";
+
+  return VALID_PLANS.includes(normalized as SubscriptionPlan)
+    ? (normalized as SubscriptionPlan)
+    : "standard";
+}
+
+function normalizeSubscriptionStatus(status?: SubscriptionStatus | string): SubscriptionStatus {
+  const normalized = String(status ?? "active").trim().toLowerCase();
+  return VALID_SUBSCRIPTION_STATUS.includes(normalized as SubscriptionStatus)
+    ? (normalized as SubscriptionStatus)
+    : "active";
+}
+
+export function isOwnerRole(user?: Partial<SessionUser> | SessionUser | null): boolean {
+  const role = normalizeRole(user?.role);
+  return role === "owner" || role === "admin";
+}
+
+export function getSessionCookieValue(raw?: string | null): SessionUser | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<SessionUser>;
+    if (!parsed.email || !parsed.nombre) return null;
+    return normalizeUser(parsed as Partial<SessionUser>);
+  } catch {
+    return null;
+  }
+}
+
+function setSessionCookieValue(user: SessionUser) {
+  if (typeof document === "undefined") return;
+
+  const nextUser = normalizeUser(user);
+  const payload = encodeURIComponent(JSON.stringify(nextUser));
+  document.cookie = `${SESSION_KEY}=${payload}; path=/; max-age=86400; SameSite=Lax`;
+}
 
 export const DEMO_USER: SessionUser = {
-  id: "demo-admin",
+  id: "demo-owner",
   nombre: "Sergio P.",
   email: "admin@stockflow.com",
   password: "stockflow123",
-  role: "admin",
-  plan: "demo",
+  role: "owner",
+  product: "stockflow_plus",
+  plan: "plus",
+  subscriptionStatus: "active",
+  trialEnabled: false,
+  createdAt: new Date().toISOString().slice(0, 10),
+  discountPercent: 0,
+  promotionId: null,
 };
 
 export function normalizeUser(user: Partial<SessionUser>): SessionUser {
   const nombre = String(user.nombre ?? "").trim().replace(/\s+/g, " ");
   const email = String(user.email ?? "").trim().toLowerCase();
   const password = String(user.password ?? "").trim();
-  const role = (user.role ?? "vendedor") as UserRole;
-  const plan = (user.plan ?? "saas") as SubscriptionPlan;
+  const role = normalizeRole(user.role);
+  const product = normalizeProduct(user.product ?? (role === "owner" ? "stockflow_plus" : "stockflow"));
+  const plan = normalizePlan(user.plan ?? (product === "stockflow_plus" ? "plus" : "standard"));
+  const subscriptionStatus = normalizeSubscriptionStatus(
+    user.subscriptionStatus ?? (user.trialEnabled ? "trial" : "active")
+  );
 
   return {
     id: String(user.id ?? `user-${Date.now()}`),
     nombre: nombre || "Usuario",
     email: email || "usuario@stockflow.com",
     password,
-    role: ["admin", "gerente", "vendedor"].includes(role) ? role : "vendedor",
-    plan: ["demo", "saas", "erp"].includes(plan) ? plan : "saas",
+    role,
+    product,
+    plan,
+    company: String(user.company ?? "").trim() || undefined,
+    createdAt: user.createdAt ?? new Date().toISOString().slice(0, 10),
+    subscriptionStatus,
+    trialEnabled: Boolean(user.trialEnabled ?? (subscriptionStatus === "trial")),
+    trialStartedAt: user.trialStartedAt ?? null,
+    trialEndsAt: user.trialEndsAt ?? null,
+    discountPercent: Number.isFinite(Number(user.discountPercent)) ? Number(user.discountPercent) : 0,
+    promotionId: user.promotionId ?? null,
   };
 }
 
@@ -110,8 +209,9 @@ export function createUser(
 
   const nuevoUsuario: SessionUser = {
     ...normalized,
-    role: normalized.role ?? "vendedor",
-    plan: normalized.plan ?? "saas",
+    role: normalized.role ?? "user",
+    plan: normalized.plan ?? "standard",
+    product: normalized.product ?? "stockflow",
     password: normalized.password || "stockflow123",
   };
 
@@ -145,13 +245,16 @@ export function getStoredSession(): SessionUser | null {
 export function setStoredSession(user: SessionUser) {
   if (typeof window === "undefined") return;
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify(normalizeUser(user)));
+  const normalizedUser = normalizeUser(user);
+  localStorage.setItem(SESSION_KEY, JSON.stringify(normalizedUser));
+  setSessionCookieValue(normalizedUser);
 }
 
 export function clearStoredSession() {
   if (typeof window === "undefined") return;
 
   localStorage.removeItem(SESSION_KEY);
+  document.cookie = `${SESSION_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
 
 export function authenticate(
@@ -194,9 +297,18 @@ export function canAccessFeature(
   if (!user) return false;
 
   const normalizedUser = normalizeUser(user as Partial<SessionUser>);
+
+  if (feature === "owner") {
+    return normalizedUser.role === "owner" || normalizedUser.role === "admin";
+  }
+
+  if (normalizedUser.role === "owner") {
+    return true;
+  }
+
   const access = FEATURE_ACCESS[feature] ?? {
-    roles: ["admin", "gerente", "vendedor"],
-    plans: ["demo", "saas", "erp"],
+    roles: ["admin", "gerente", "vendedor", "user"],
+    plans: ["demo", "saas", "erp", "free_trial", "standard", "plus"],
   };
 
   return (
@@ -212,7 +324,7 @@ export function updateUserPlan(
   const normalizedUser = normalizeUser(user ?? {});
   const nextUser = {
     ...normalizedUser,
-    plan: ["demo", "saas", "erp"].includes(plan) ? plan : "saas",
+    plan: VALID_PLANS.includes(plan) ? plan : "standard",
   };
 
   if (typeof window !== "undefined") {
@@ -231,6 +343,7 @@ export function updateUserPlan(
 
     window.localStorage.setItem(USERS_KEY, JSON.stringify(updatedUsers));
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextUser));
+    setSessionCookieValue(nextUser);
   }
 
   return nextUser;
@@ -242,6 +355,11 @@ export function getFeatureForPath(pathname: string): FeatureKey | null {
   if (!normalized || normalized === "dashboard") return "dashboard";
 
   const mapping: Record<string, FeatureKey> = {
+    owner: "owner",
+    "owner/usuarios": "owner",
+    "owner/pruebas": "owner",
+    "owner/promociones": "owner",
+    "owner/plus": "owner",
     "dashboard/productos": "productos",
     "dashboard/clientes": "clientes",
     "dashboard/usuarios": "usuarios",

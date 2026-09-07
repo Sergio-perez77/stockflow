@@ -26,6 +26,28 @@ test("normalizeUser agrega defaults y normaliza role", () => {
   assert.equal(user.password, "secret");
 });
 
+test("normalizeUser acepta owner y estructura de suscripción", () => {
+  const owner = normalizeUser({
+    id: "owner-1",
+    nombre: "Dueño",
+    email: "owner@stockflow.com",
+    role: "owner",
+    password: "secret",
+    product: "stockflow_plus",
+    plan: "plus",
+    subscriptionStatus: "active",
+    trialEnabled: true,
+    trialStartedAt: "2026-08-01",
+    trialEndsAt: "2026-08-31",
+  });
+
+  assert.equal(owner.role, "owner");
+  assert.equal(owner.product, "stockflow_plus");
+  assert.equal(owner.plan, "plus");
+  assert.equal(owner.subscriptionStatus, "active");
+  assert.equal(owner.trialEnabled, true);
+});
+
 test("authenticate valida usuarios guardados y demo", () => {
   const stored: SessionUser[] = [
     {
@@ -45,7 +67,7 @@ test("authenticate valida usuarios guardados y demo", () => {
 
   const demo = authenticate("admin@stockflow.com", "stockflow123");
   assert.ok(demo);
-  assert.equal(demo?.role, "admin");
+  assert.equal(demo?.role, "owner");
 });
 
 test("createUser agrega usuario con rol por defecto y no duplica email", () => {
@@ -67,7 +89,7 @@ test("createUser agrega usuario con rol por defecto y no duplica email", () => {
 
   assert.ok(nuevo);
   assert.equal(nuevo?.email, "carlos@ejemplo.com");
-  assert.equal(nuevo?.role, "vendedor");
+  assert.equal(nuevo?.role, "user");
 
   const duplicado = createUser(usuarios, {
     nombre: "Admin 2",

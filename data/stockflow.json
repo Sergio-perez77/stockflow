@@ -5,10 +5,15 @@
   "ventas": [],
   "users": [
     {
-      "id": "demo-admin",
+      "id": "demo-owner",
       "nombre": "Sergio P.",
       "email": "admin@stockflow.com",
-      "role": "admin"
+      "role": "owner",
+      "product": "stockflow_plus",
+      "plan": "plus",
+      "subscriptionStatus": "active",
+      "trialEnabled": false,
+      "createdAt": "2026-09-07"
     }
   ]
 }
