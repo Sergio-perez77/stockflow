@@ -1,10 +1,11 @@
-import { getOwnerOverview, getOwnerUsers } from "@/lib/owner";
+import { getOwnerOverview, getOwnerUsers, getPromotionSummary, getTrialSummary } from "@/lib/owner";
 
 const cards = [
   { label: "Usuarios totales", key: "totalUsers" },
   { label: "Usuarios activos", key: "activeUsers" },
   { label: "En período de prueba", key: "inTrialUsers" },
   { label: "Pruebas vencidas", key: "expiredTrials" },
+  { label: "Pruebas por vencer", key: "trialsExpiringSoon" },
   { label: "Usuarios StockFlow", key: "stockflowUsers" },
   { label: "Usuarios StockFlow+", key: "stockflowPlusUsers" },
   { label: "Usuarios Plus", key: "plusUsers" },
@@ -13,6 +14,7 @@ const cards = [
 export default function OwnerPage() {
   const users = getOwnerUsers();
   const overview = getOwnerOverview(users);
+  const promotionSummary = getPromotionSummary(users);
   const now = new Date();
   const recentUsers = [...users]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -32,6 +34,30 @@ export default function OwnerPage() {
             <p className="mt-3 text-3xl font-bold text-white">{overview[card.key]}</p>
           </div>
         ))}
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">Promoción actual</p>
+          <h3 className="mt-3 text-2xl font-bold text-white">Primeros 100 clientes</h3>
+          <p className="mt-2 text-slate-300">
+            {promotionSummary.first100Used} / 100 utilizados
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            {promotionSummary.first100Remaining} restantes
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">Próximas pruebas</p>
+          <h3 className="mt-3 text-2xl font-bold text-white">Vencimiento</h3>
+          <p className="mt-2 text-slate-300">
+            {users.filter((user) => user.role !== "owner" && user.trialEnabled).length} usuarios en prueba
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            {users.filter((user) => user.role !== "owner" && user.trialEnabled && getTrialSummary(user).remainingDays <= 7).length} próximas a vencer
+          </p>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">

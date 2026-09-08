@@ -8,6 +8,8 @@ export type SubscriptionPlan =
   | "standard"
   | "plus";
 export type SubscriptionStatus = "trial" | "active" | "expired" | "suspended";
+export type PaymentMethodStatus = "not_added" | "ready" | "failed";
+export type PaymentProvider = "mercadopago" | "stripe";
 export type FeatureKey =
   | "dashboard"
   | "owner"
@@ -35,6 +37,11 @@ export type SessionUser = {
   trialEnabled?: boolean;
   trialStartedAt?: string | null;
   trialEndsAt?: string | null;
+  paymentMethodStatus?: PaymentMethodStatus;
+  paymentProvider?: PaymentProvider | null;
+  paymentCustomerId?: string | null;
+  paymentMethodId?: string | null;
+  autoRenew?: boolean;
   discountPercent?: number;
   promotionId?: string | null;
   password?: string;
@@ -64,6 +71,8 @@ const VALID_ROLES: UserRole[] = ["admin", "gerente", "vendedor", "owner", "user"
 const VALID_PLANS: SubscriptionPlan[] = ["demo", "saas", "erp", "free_trial", "standard", "plus"];
 const VALID_PRODUCTS: ProductType[] = ["stockflow", "stockflow_plus"];
 const VALID_SUBSCRIPTION_STATUS: SubscriptionStatus[] = ["trial", "active", "expired", "suspended"];
+const VALID_PAYMENT_METHOD_STATUS: PaymentMethodStatus[] = ["not_added", "ready", "failed"];
+const VALID_PAYMENT_PROVIDERS: PaymentProvider[] = ["mercadopago", "stripe"];
 
 function normalizeRole(role?: UserRole | string): UserRole {
   const normalized = String(role ?? "user").trim().toLowerCase();
@@ -95,6 +104,23 @@ function normalizeSubscriptionStatus(status?: SubscriptionStatus | string): Subs
   return VALID_SUBSCRIPTION_STATUS.includes(normalized as SubscriptionStatus)
     ? (normalized as SubscriptionStatus)
     : "active";
+}
+
+function normalizePaymentMethodStatus(
+  status?: PaymentMethodStatus | string | null
+): PaymentMethodStatus {
+  const normalized = String(status ?? "not_added").trim().toLowerCase();
+  return VALID_PAYMENT_METHOD_STATUS.includes(normalized as PaymentMethodStatus)
+    ? (normalized as PaymentMethodStatus)
+    : "not_added";
+}
+
+function normalizePaymentProvider(provider?: PaymentProvider | string | null): PaymentProvider | null {
+  if (!provider) return null;
+  const normalized = String(provider).trim().toLowerCase();
+  return VALID_PAYMENT_PROVIDERS.includes(normalized as PaymentProvider)
+    ? (normalized as PaymentProvider)
+    : null;
 }
 
 export function isOwnerRole(user?: Partial<SessionUser> | SessionUser | null): boolean {
@@ -132,6 +158,13 @@ export const DEMO_USER: SessionUser = {
   plan: "plus",
   subscriptionStatus: "active",
   trialEnabled: false,
+  trialStartedAt: null,
+  trialEndsAt: null,
+  paymentMethodStatus: "ready",
+  paymentProvider: "stripe",
+  paymentCustomerId: null,
+  paymentMethodId: null,
+  autoRenew: true,
   createdAt: new Date().toISOString().slice(0, 10),
   discountPercent: 0,
   promotionId: null,
@@ -147,6 +180,8 @@ export function normalizeUser(user: Partial<SessionUser>): SessionUser {
   const subscriptionStatus = normalizeSubscriptionStatus(
     user.subscriptionStatus ?? (user.trialEnabled ? "trial" : "active")
   );
+  const paymentMethodStatus = normalizePaymentMethodStatus(user.paymentMethodStatus ?? "not_added");
+  const paymentProvider = normalizePaymentProvider(user.paymentProvider ?? null);
 
   return {
     id: String(user.id ?? `user-${Date.now()}`),
@@ -162,6 +197,11 @@ export function normalizeUser(user: Partial<SessionUser>): SessionUser {
     trialEnabled: Boolean(user.trialEnabled ?? (subscriptionStatus === "trial")),
     trialStartedAt: user.trialStartedAt ?? null,
     trialEndsAt: user.trialEndsAt ?? null,
+    paymentMethodStatus,
+    paymentProvider,
+    paymentCustomerId: user.paymentCustomerId ?? null,
+    paymentMethodId: user.paymentMethodId ?? null,
+    autoRenew: Boolean(user.autoRenew ?? false),
     discountPercent: Number.isFinite(Number(user.discountPercent)) ? Number(user.discountPercent) : 0,
     promotionId: user.promotionId ?? null,
   };
