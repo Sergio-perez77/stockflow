@@ -6,8 +6,10 @@ import {
   canAccessFeature,
   createUser,
   getUsers,
+  hashPassword,
   normalizeUser,
   updateUserPlan,
+  verifyPassword,
   type SessionUser,
 } from "./auth.ts";
 import {
@@ -106,6 +108,15 @@ test("createUser agrega usuario con rol por defecto y no duplica email", () => {
   });
 
   assert.equal(duplicado, null);
+});
+
+test("hashPassword y verifyPassword validan credenciales con hash seguro", () => {
+  const password = "Segura-2026";
+  const hash = hashPassword(password);
+
+  assert.notEqual(hash, password);
+  assert.equal(verifyPassword(password, hash), true);
+  assert.equal(verifyPassword("Otra", hash), false);
 });
 
 test("getUsers devuelve lista sin valores vacíos", () => {

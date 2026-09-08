@@ -5,18 +5,24 @@ import { useEffect, useMemo, useState } from "react";
 import { getTrialSummaryForClient } from "@/lib/owner-client";
 import type { OwnerUserRecord } from "@/lib/owner-types";
 
+const INTERNAL_ROLES = new Set(["admin", "gerente", "vendedor"]);
+
 export default function OwnerUsersPage() {
   const [users, setUsers] = useState<OwnerUserRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadUsers = async () => {
+    const response = await fetch("/api/owner/users");
+    const payload = await response.json();
+    const data = Array.isArray(payload?.data) ? payload.data : [];
+    const nextUsers = data.filter((user: OwnerUserRecord) => user.role !== "owner");
+    setUsers(nextUsers);
+    if (!selectedId && nextUsers[0]) setSelectedId(nextUsers[0].id);
+  };
 
   useEffect(() => {
-    fetch("/api/owner/users")
-      .then((response) => response.json())
-      .then((payload) => {
-        const data = Array.isArray(payload?.data) ? payload.data : [];
-        setUsers(data.filter((user: OwnerUserRecord) => user.role !== "owner"));
-      })
-      .catch(() => setUsers([]));
+    void loadUsers();
   }, []);
 
   const selectedUser = useMemo(
@@ -24,9 +30,34 @@ export default function OwnerUsersPage() {
     [selectedId, users]
   );
 
-  useEffect(() => {
-    if (!selectedId && users[0]) setSelectedId(users[0].id);
-  }, [selectedId, users]);
+  const runOwnerUpdate = async (userId: string, patch: Record<string, unknown>) => {
+    setLoading(true);
+    try {
+      await fetch(`/api/owner/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      await loadUsers();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUserTypeLabel = (user: OwnerUserRecord) => {
+    if (user.role === "owner") return "Owner";
+    return INTERNAL_ROLES.has(user.role) ? "Interno" : "Cliente";
+  };
+
+  const quickActions = [
+    { label: "Activar", patch: { subscriptionStatus: "active" } },
+    { label: "Suspender", patch: { subscriptionStatus: "suspended" } },
+    { label: "StockFlow", patch: { product: "stockflow", plan: "standard" } },
+    { label: "StockFlow+", patch: { product: "stockflow_plus", plan: "plus" } },
+    { label: "Prueba 30d", patch: { action: "reset_trial" } },
+    { label: "+7 días", patch: { action: "add_days", days: 7 } },
+    { label: "-7 días", patch: { action: "remove_days", days: 7 } },
+  ];
 
   return (
     <div className="space-y-6">
@@ -42,6 +73,7 @@ export default function OwnerUsersPage() {
               <tr>
                 <th className="px-4 py-3 font-medium">Nombre</th>
                 <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">Empresa</th>
                 <th className="px-4 py-3 font-medium">Producto</th>
                 <th className="px-4 py-3 font-medium">Plan</th>
@@ -53,6 +85,7 @@ export default function OwnerUsersPage() {
             <tbody>
               {users.map((user) => {
                 const trial = getTrialSummaryForClient(user);
+                const typeLabel = getUserTypeLabel(user);
 
                 return (
                   <tr
@@ -62,6 +95,11 @@ export default function OwnerUsersPage() {
                   >
                     <td className="px-4 py-3">{user.nombre}</td>
                     <td className="px-4 py-3">{user.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${typeLabel === "Cliente" ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300" : "border-violet-500/40 bg-violet-500/10 text-violet-300"}`}>
+                        {typeLabel}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{user.company ?? "—"}</td>
                     <td className="px-4 py-3">{user.product === "stockflow_plus" ? "StockFlow+" : "StockFlow"}</td>
                     <td className="px-4 py-3 capitalize">{user.plan.replace("_", " ")}</td>
@@ -93,6 +131,10 @@ export default function OwnerUsersPage() {
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Empresa</p>
               <p className="mt-2 text-white">{selectedUser.company ?? "Sin empresa"}</p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Tipo</p>
+              <p className="mt-2 text-white">{getUserTypeLabel(selectedUser)}</p>
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Fecha de registro</p>
@@ -145,6 +187,23 @@ export default function OwnerUsersPage() {
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Promoción</p>
               <p className="mt-2 text-white">{selectedUser.promotionId ?? "—"}</p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Acciones rápidas</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runOwnerUpdate(selectedUser.id, action.patch)}
+                  className="rounded border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300 disabled:opacity-50"
+                >
+                  {action.label}
+                </button>
+              ))}
             </div>
           </div>
         </section>

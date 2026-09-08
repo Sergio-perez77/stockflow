@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 export type UserRole = "admin" | "gerente" | "vendedor" | "owner" | "user";
 export type ProductType = "stockflow" | "stockflow_plus";
 export type SubscriptionPlan =
@@ -128,6 +130,17 @@ export function isOwnerRole(user?: Partial<SessionUser> | SessionUser | null): b
   return role === "owner" || role === "admin";
 }
 
+export function hashPassword(password: string): string {
+  const source = String(password ?? "").trim();
+  if (!source) return "";
+  return crypto.createHash("sha256").update(source).digest("hex");
+}
+
+export function verifyPassword(password: string, hash: string): boolean {
+  if (!password || !hash) return false;
+  return hashPassword(password) === String(hash).trim();
+}
+
 export function getSessionCookieValue(raw?: string | null): SessionUser | null {
   if (!raw) return null;
 
@@ -247,12 +260,13 @@ export function createUser(
     return null;
   }
 
+  const passwordHash = hashPassword(normalized.password || "stockflow123");
   const nuevoUsuario: SessionUser = {
     ...normalized,
     role: normalized.role ?? "user",
     plan: normalized.plan ?? "standard",
     product: normalized.product ?? "stockflow",
-    password: normalized.password || "stockflow123",
+    password: passwordHash,
   };
 
   const finalUsers = [...list, nuevoUsuario];
@@ -306,8 +320,9 @@ export function authenticate(
   const usersList = users.map((user) => normalizeUser(user));
 
   const matched = usersList.find((user) => {
-    const userPassword = String(user.password ?? "").trim();
-    return user.email === normalizedEmail && userPassword === password.trim();
+    const storedHash = String(user.password ?? "").trim();
+    const plainPassword = String(password ?? "").trim();
+    return user.email === normalizedEmail && verifyPassword(plainPassword, storedHash);
   });
 
   if (matched) {
@@ -319,7 +334,7 @@ export function authenticate(
 
   if (
     normalizedEmail === DEMO_USER.email &&
-    String(DEMO_USER.password ?? "") === password.trim()
+    verifyPassword(password.trim(), hashPassword(String(DEMO_USER.password ?? "").trim()))
   ) {
     return {
       ...DEMO_USER,

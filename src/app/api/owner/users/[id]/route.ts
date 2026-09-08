@@ -30,6 +30,13 @@ export async function PATCH(
     );
   }
 
+  if (targetUser.role === "owner") {
+    return NextResponse.json(
+      { ok: false, message: "El usuario Owner no puede modificarse desde esta pantalla." },
+      { status: 403 }
+    );
+  }
+
   let nextUser = normalizeOwnerUser({ ...targetUser, ...payload });
 
   if (payload.action === "activate_trial" || payload.action === "deactivate_trial" || payload.action === "add_days" || payload.action === "remove_days" || payload.action === "reset_trial") {

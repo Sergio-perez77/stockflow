@@ -9,6 +9,19 @@ export type DbData = {
   proveedores: unknown[];
   ventas: unknown[];
   users: unknown[];
+  companies: unknown[];
+  userCompanies: unknown[];
+  roles: unknown[];
+  permissions: unknown[];
+  rolePermissions: unknown[];
+  sessions: unknown[];
+  billingProducts: unknown[];
+  plans: unknown[];
+  subscriptions: unknown[];
+  billingCustomers: unknown[];
+  paymentMethodReferences: unknown[];
+  billingEvents: unknown[];
+  auditLogs: unknown[];
 };
 
 export function readDb(): DbData {
@@ -22,6 +35,19 @@ export function readDb(): DbData {
       proveedores: [],
       ventas: [],
       users: [],
+      companies: [],
+      userCompanies: [],
+      roles: [],
+      permissions: [],
+      rolePermissions: [],
+      sessions: [],
+      billingProducts: [],
+      plans: [],
+      subscriptions: [],
+      billingCustomers: [],
+      paymentMethodReferences: [],
+      billingEvents: [],
+      auditLogs: [],
     };
   }
 }

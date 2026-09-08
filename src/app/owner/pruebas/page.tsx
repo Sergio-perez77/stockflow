@@ -5,13 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { getTrialSummaryForClient } from "@/lib/owner-client";
 import type { OwnerUserRecord } from "@/lib/owner-types";
 
-const trialActions = [
+const trialActions: Array<{ key: string; label: string; extra?: number }> = [
   { key: "activate_trial", label: "Activar prueba" },
   { key: "deactivate_trial", label: "Desactivar prueba" },
   { key: "reset_trial", label: "Reiniciar prueba" },
   { key: "add_days", label: "+7 días", extra: 7 },
   { key: "remove_days", label: "-7 días", extra: 7 },
-] as const;
+];
 
 export default function OwnerPruebasPage() {
   const [users, setUsers] = useState<OwnerUserRecord[]>([]);

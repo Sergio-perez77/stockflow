@@ -1,9 +1,12 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-import { readDb } from "@/lib/db";
+import { authenticate, getUsers, SESSION_KEY } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json();
+  const body = await request.json().catch(() => ({}));
+  const email = String(body?.email ?? "").trim().toLowerCase();
+  const password = String(body?.password ?? "");
 
   if (!email || !password) {
     return NextResponse.json(
@@ -12,34 +15,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const db = readDb();
-  const user = db.users.find(
-    (item) =>
-      typeof item === "object" &&
-      item !== null &&
-      "email" in item &&
-      String((item as { email?: string }).email).toLowerCase() === String(email).trim().toLowerCase()
-  ) as {
-    id?: string;
-    nombre?: string;
-    email?: string;
-    role?: string;
-  } | undefined;
-
-  if (!user || password !== "stockflow123") {
+  const user = authenticate(email, password, getUsers());
+  if (!user) {
     return NextResponse.json(
       { ok: false, message: "Credenciales inválidas." },
       { status: 401 }
     );
   }
 
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_KEY, JSON.stringify(user), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  });
+
   return NextResponse.json({
     ok: true,
     user: {
-      id: user.id ?? "demo-admin",
-      nombre: user.nombre ?? "StockFlow Admin",
-      email: user.email ?? String(email),
-      role: user.role ?? "admin",
+      id: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      role: user.role,
+      plan: user.plan,
+      product: user.product,
     },
   });
 }
