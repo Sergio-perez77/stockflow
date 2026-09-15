@@ -1777,14 +1777,6 @@ const camposStockFlow: Record<
         Importá y exportá la información de tu negocio.
       </p>
 
-      <div className="mb-4 text-sm text-slate-400">
-        {typeof window !== 'undefined' && (
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400">Sesión: <span className="text-slate-200">{localStorage.getItem('stockflow_session')}</span></span>
-          </div>
-        )}
-      </div>
-
       {typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
         <div className="mb-6">
           <button

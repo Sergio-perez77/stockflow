@@ -1,708 +1,242 @@
 {
-  "products": [
-    {
-      "id": 1787147228411,
-      "codigo": "ART-001",
-      "sku": "SKU-001",
-      "nombre": "Yerba Mate",
-      "categoria": "Almacén",
-      "stock": 25,
-      "stockMinimo": 5,
-      "costo": "1800",
-      "precio": "3200"
-    },
-    {
-      "id": 1787147228412,
-      "codigo": "ART-002",
-      "sku": "SKU-002",
-      "nombre": "Café Molido",
-      "categoria": "Almacén",
-      "stock": 18,
-      "stockMinimo": 4,
-      "costo": "2500",
-      "precio": "4500"
-    },
-    {
-      "id": 1787147228413,
-      "codigo": "ART-003",
-      "sku": "SKU-003",
-      "nombre": "Té Verde",
-      "categoria": "Infusiones",
-      "stock": 32,
-      "stockMinimo": 6,
-      "costo": "1200",
-      "precio": "2400"
-    },
-    {
-      "id": 1787147228414,
-      "codigo": "ART-004",
-      "sku": "SKU-004",
-      "nombre": "Miel Natural",
-      "categoria": "Alimentos",
-      "stock": 12,
-      "stockMinimo": 3,
-      "costo": "3000",
-      "precio": "5500"
-    },
-    {
-      "id": 1787147228415,
-      "codigo": "ART-005",
-      "sku": "SKU-005",
-      "nombre": "Sal Marina",
-      "categoria": "Alimentos",
-      "stock": 40,
-      "stockMinimo": 8,
-      "costo": "900",
-      "precio": "1800"
-    }
-  ],
-  "clientes": [
-    {
-      "id": 1787067002848.6013,
-      "nombre": "Emma Davis",
-      "documento": "N9503783",
-      "email": "emma.davis@outlook.com"
-    },
-    {
-      "id": 1787067002849.6199,
-      "nombre": "Lucía Romero",
-      "documento": 37362904,
-      "email": "lucía.romero@hotmail.com"
-    },
-    {
-      "id": 1787067002849.1467,
-      "nombre": "Mía Schneider",
-      "documento": 97045955,
-      "email": "mía.schneider@outlook.com"
-    },
-    {
-      "id": 1787067002849.2283,
-      "nombre": "Sofía Fischer",
-      "documento": "N3124250",
-      "email": "sofía.fischer@hotmail.com"
-    },
-    {
-      "id": 1787067002849.49,
-      "nombre": "Catalina Johnson",
-      "documento": "N2039234",
-      "email": "catalina.johnson@yahoo.com"
-    },
-    {
-      "id": 1787067002849.567,
-      "nombre": "Gabriel López",
-      "documento": "E3763284",
-      "email": "gabriel.lópez@gmail.com"
-    },
-    {
-      "id": 1787067002849.6528,
-      "nombre": "Elena Smith",
-      "documento": 97352993,
-      "email": "elena.smith@company.com"
-    },
-    {
-      "id": 1787067002849.1658,
-      "nombre": "Isabella Wilson",
-      "documento": 15897904,
-      "email": "isabella.wilson@company.com"
-    },
-    {
-      "id": 1787067002849.6448,
-      "nombre": "Hans Fischer",
-      "documento": 69758275,
-      "email": "hans.fischer@company.com"
-    },
-    {
-      "id": 1787067002849.637,
-      "nombre": "Camila Fernández",
-      "documento": 63958430,
-      "email": "camila.fernández@yahoo.com"
-    },
-    {
-      "id": 1787067002849.3223,
-      "nombre": "Gabriel Álvarez",
-      "documento": 65394441,
-      "email": "gabriel.álvarez@hotmail.com"
-    },
-    {
-      "id": 1787067002849.1213,
-      "nombre": "Valentina Torres",
-      "documento": 46409758,
-      "email": "valentina.torres@yahoo.com"
-    },
-    {
-      "id": 1787067002849.5813,
-      "nombre": "Sofía Müller",
-      "documento": "E6436486",
-      "email": "sofía.müller@gmail.com"
-    },
-    {
-      "id": 1787067002849.064,
-      "nombre": "Mateo Miller",
-      "documento": "N3927427",
-      "email": "mateo.miller@gmail.com"
-    },
-    {
-      "id": 1787067002849.2432,
-      "nombre": "Benjamin Álvarez",
-      "documento": "A6046525",
-      "email": "benjamin.álvarez@company.com"
-    },
-    {
-      "id": 1787067002849.1372,
-      "nombre": "Camila Gómez",
-      "documento": "N1335324",
-      "email": "camila.gómez@gmail.com"
-    },
-    {
-      "id": 1787067002849.8838,
-      "nombre": "Joaquín Johnson",
-      "documento": 28853282,
-      "email": "joaquín.johnson@company.com"
-    },
-    {
-      "id": 1787067002849.5208,
-      "nombre": "Daniel Fernández",
-      "documento": 40448960,
-      "email": "daniel.fernández@outlook.com"
-    },
-    {
-      "id": 1787067002849.4294,
-      "nombre": "Hans Jones",
-      "documento": "E9566833",
-      "email": "hans.jones@gmail.com"
-    },
-    {
-      "id": 1787067002849.6606,
-      "nombre": "Sofía Brown",
-      "documento": "A4083608",
-      "email": "sofía.brown@company.com"
-    },
-    {
-      "id": 1787067002849.5564,
-      "nombre": "Isabella Jones",
-      "documento": 51124827,
-      "email": "isabella.jones@yahoo.com"
-    },
-    {
-      "id": 1787067002849.9504,
-      "nombre": "Martina Fischer",
-      "documento": "A2469412",
-      "email": "martina.fischer@hotmail.com"
-    },
-    {
-      "id": 1787067002849.3757,
-      "nombre": "Thiago Ramírez",
-      "documento": "A8407288",
-      "email": "thiago.ramírez@company.com"
-    },
-    {
-      "id": 1787067002849.2876,
-      "nombre": "Lucía García",
-      "documento": 49450012,
-      "email": "lucía.garcía@yahoo.com"
-    },
-    {
-      "id": 1787067002849.7583,
-      "nombre": "Camila Wilson",
-      "documento": 32751134,
-      "email": "camila.wilson@yahoo.com"
-    },
-    {
-      "id": 1787067002849.3406,
-      "nombre": "Sophie Bernard",
-      "documento": 45534478,
-      "email": "sophie.bernard@yahoo.com"
-    },
-    {
-      "id": 1787067002849.058,
-      "nombre": "Alexander Johnson",
-      "documento": "E3639725",
-      "email": "alexander.johnson@outlook.com"
-    },
-    {
-      "id": 1787067002849.5842,
-      "nombre": "Joaquín Smith",
-      "documento": 20337845,
-      "email": "joaquín.smith@hotmail.com"
-    },
-    {
-      "id": 1787067002849.1104,
-      "nombre": "Catalina Álvarez",
-      "documento": "E8988706",
-      "email": "catalina.álvarez@gmail.com"
-    },
-    {
-      "id": 1787067002849.1047,
-      "nombre": "Nicolás Torres",
-      "documento": 10612719,
-      "email": "nicolás.torres@outlook.com"
-    },
-    {
-      "id": 1787067002849.1433,
-      "nombre": "Hans Johnson",
-      "documento": "A9318373",
-      "email": "hans.johnson@yahoo.com"
-    },
-    {
-      "id": 1787067002849.9265,
-      "nombre": "Martina Torres",
-      "documento": 63080447,
-      "email": "martina.torres@company.com"
-    },
-    {
-      "id": 1787067002849.7021,
-      "nombre": "Mateo Sánchez",
-      "documento": 70483630,
-      "email": "mateo.sánchez@outlook.com"
-    },
-    {
-      "id": 1787067002849.2205,
-      "nombre": "Benjamin Ramírez",
-      "documento": 96179803,
-      "email": "benjamin.ramírez@hotmail.com"
-    },
-    {
-      "id": 1787067002849.285,
-      "nombre": "Victoria Bernard",
-      "documento": 65027550,
-      "email": "victoria.bernard@outlook.com"
-    },
-    {
-      "id": 1787067002849.2144,
-      "nombre": "Benjamin Rodríguez",
-      "documento": 12740336,
-      "email": "benjamin.rodríguez@company.com"
-    },
-    {
-      "id": 1787067002849.758,
-      "nombre": "Elena Smith",
-      "documento": "N7152305",
-      "email": "elena.smith@hotmail.com"
-    },
-    {
-      "id": 1787067002849.6052,
-      "nombre": "Santiago Jones",
-      "documento": "N7908999",
-      "email": "santiago.jones@yahoo.com"
-    },
-    {
-      "id": 1787067002849.1643,
-      "nombre": "Isabella Smith",
-      "documento": 98825391,
-      "email": "isabella.smith@outlook.com"
-    },
-    {
-      "id": 1787067002849.8489,
-      "nombre": "Pierre Martin",
-      "documento": 56727913,
-      "email": "pierre.martin@yahoo.com"
-    },
-    {
-      "id": 1787067002849.678,
-      "nombre": "Alexander Romero",
-      "documento": "E2715305",
-      "email": "alexander.romero@yahoo.com"
-    },
-    {
-      "id": 1787067002849.5552,
-      "nombre": "Hans Ruiz",
-      "documento": "E3891698",
-      "email": "hans.ruiz@hotmail.com"
-    },
-    {
-      "id": 1787067002849.318,
-      "nombre": "Mía Williams",
-      "documento": 61191181,
-      "email": "mía.williams@yahoo.com"
-    },
-    {
-      "id": 1787067002849.0508,
-      "nombre": "Sarah Wilson",
-      "documento": "E6862394",
-      "email": "sarah.wilson@hotmail.com"
-    },
-    {
-      "id": 1787067002849.348,
-      "nombre": "Felipe Díaz",
-      "documento": "N8626752",
-      "email": "felipe.díaz@gmail.com"
-    },
-    {
-      "id": 1787067002849.2417,
-      "nombre": "Alexander Johnson",
-      "documento": 86473291,
-      "email": "alexander.johnson@company.com"
-    },
-    {
-      "id": 1787067002849.8955,
-      "nombre": "Daniel González",
-      "documento": 83129534,
-      "email": "daniel.gonzález@company.com"
-    },
-    {
-      "id": 1787067002849.326,
-      "nombre": "Joaquín Sánchez",
-      "documento": "E1373839",
-      "email": "joaquín.sánchez@gmail.com"
-    },
-    {
-      "id": 1787067002849.0867,
-      "nombre": "Catalina Dupont",
-      "documento": "A1869512",
-      "email": "catalina.dupont@yahoo.com"
-    },
-    {
-      "id": 1787067002849.3796,
-      "nombre": "John Rodríguez",
-      "documento": "A2707868",
-      "email": "john.rodríguez@company.com"
-    },
-    {
-      "id": 1787067002849.4404,
-      "nombre": "Lucía Sánchez",
-      "documento": 28978862,
-      "email": "lucía.sánchez@hotmail.com"
-    },
-    {
-      "id": 1787067002849.7366,
-      "nombre": "Felipe Fernández",
-      "documento": "E1878183",
-      "email": "felipe.fernández@outlook.com"
-    },
-    {
-      "id": 1787067002849.4614,
-      "nombre": "Elena Johnson",
-      "documento": 83877784,
-      "email": "elena.johnson@hotmail.com"
-    },
-    {
-      "id": 1787067002849.117,
-      "nombre": "Thiago Martin",
-      "documento": 32607978,
-      "email": "thiago.martin@outlook.com"
-    },
-    {
-      "id": 1787067002849.0125,
-      "nombre": "Valentina Sosa",
-      "documento": 70369447,
-      "email": "valentina.sosa@hotmail.com"
-    },
-    {
-      "id": 1787067002849.0596,
-      "nombre": "Emma Ramírez",
-      "documento": "E9315496",
-      "email": "emma.ramírez@company.com"
-    },
-    {
-      "id": 1787067002849.4922,
-      "nombre": "Sofía Romero",
-      "documento": 91130046,
-      "email": "sofía.romero@hotmail.com"
-    },
-    {
-      "id": 1787067002849.3306,
-      "nombre": "Julieta Gómez",
-      "documento": 52228137,
-      "email": "julieta.gómez@gmail.com"
-    },
-    {
-      "id": 1787067002849.1267,
-      "nombre": "Felipe Johnson",
-      "documento": "E3524664",
-      "email": "felipe.johnson@gmail.com"
-    },
-    {
-      "id": 1787067002849.297,
-      "nombre": "Victoria González",
-      "documento": "A6295603",
-      "email": "victoria.gonzález@company.com"
-    },
-    {
-      "id": 1787067002849.3875,
-      "nombre": "Victoria Williams",
-      "documento": 62401250,
-      "email": "victoria.williams@gmail.com"
-    },
-    {
-      "id": 1787067002849.6895,
-      "nombre": "Julieta López",
-      "documento": 43293891,
-      "email": "julieta.lópez@company.com"
-    },
-    {
-      "id": 1787067002849.0496,
-      "nombre": "Martina Johnson",
-      "documento": 15181263,
-      "email": "martina.johnson@hotmail.com"
-    },
-    {
-      "id": 1787067002849.222,
-      "nombre": "Benjamin Jones",
-      "documento": "A1407480",
-      "email": "benjamin.jones@outlook.com"
-    },
-    {
-      "id": 1787067002849.644,
-      "nombre": "Thiago Brown",
-      "documento": "E3861049",
-      "email": "thiago.brown@hotmail.com"
-    },
-    {
-      "id": 1787067002849.0427,
-      "nombre": "Lucas Schneider",
-      "documento": 66471440,
-      "email": "lucas.schneider@yahoo.com"
-    },
-    {
-      "id": 1787067002849.6226,
-      "nombre": "Mateo Miller",
-      "documento": "A3145620",
-      "email": "mateo.miller@hotmail.com"
-    },
-    {
-      "id": 1787067002849.9167,
-      "nombre": "Elena García",
-      "documento": "A4978218",
-      "email": "elena.garcía@hotmail.com"
-    },
-    {
-      "id": 1787067002849.6526,
-      "nombre": "Sophie Díaz",
-      "documento": 46405011,
-      "email": "sophie.díaz@yahoo.com"
-    },
-    {
-      "id": 1787067002849.096,
-      "nombre": "David Gómez",
-      "documento": 41920470,
-      "email": "david.gómez@company.com"
-    },
-    {
-      "id": 1787067002849.449,
-      "nombre": "Thiago Martin",
-      "documento": 99367169,
-      "email": "thiago.martin@gmail.com"
-    },
-    {
-      "id": 1787067002849.0886,
-      "nombre": "Emma Jones",
-      "documento": "B6206027",
-      "email": "emma.jones@outlook.com"
-    },
-    {
-      "id": 1787067002849.2073,
-      "nombre": "Pierre Díaz",
-      "documento": "A2607798",
-      "email": "pierre.díaz@gmail.com"
-    },
-    {
-      "id": 1787074442501,
-      "nombre": "Valentina Ramírez",
-      "documento": 91095171,
-      "email": "valentina.ramírez@gmail.com"
-    },
-    {
-      "id": 1787067002849.4053,
-      "nombre": "Martina Gómez",
-      "documento": "E8437277",
-      "email": "martina.gómez@gmail.com"
-    },
-    {
-      "id": 1787067002849.112,
-      "nombre": "Michael Miller",
-      "documento": 77284728,
-      "email": "michael.miller@outlook.com"
-    },
-    {
-      "id": 1787067002849.2373,
-      "nombre": "Santiago Rodríguez",
-      "documento": "E4507707",
-      "email": "santiago.rodríguez@gmail.com"
-    },
-    {
-      "id": 1787067002849.9136,
-      "nombre": "Lucía Fernández",
-      "documento": 98561888,
-      "email": "lucía.fernández@outlook.com"
-    },
-    {
-      "id": 1787067002849.9395,
-      "nombre": "Emma López",
-      "documento": "E5592766",
-      "email": "emma.lópez@outlook.com"
-    },
-    {
-      "id": 1787067002849.6125,
-      "nombre": "Sophie Fischer",
-      "documento": 69061056,
-      "email": "sophie.fischer@gmail.com"
-    },
-    {
-      "id": 1787067002849.6458,
-      "nombre": "David Williams",
-      "documento": 85912890,
-      "email": "david.williams@gmail.com"
-    },
-    {
-      "id": 1787067002849.4504,
-      "nombre": "Emma Pérez",
-      "documento": 44472974,
-      "email": "emma.pérez@gmail.com"
-    },
-    {
-      "id": 1787067002849.5657,
-      "nombre": "Joaquín García",
-      "documento": "E2567502",
-      "email": "joaquín.garcía@yahoo.com"
-    },
-    {
-      "id": 1787067002849.1023,
-      "nombre": "Lucía Brown",
-      "documento": "A1997404",
-      "email": "lucía.brown@company.com"
-    },
-    {
-      "id": 1787067002849.846,
-      "nombre": "Emma Ramírez",
-      "documento": 51528419,
-      "email": "emma.ramírez@yahoo.com"
-    },
-    {
-      "id": 1787067002849.7234,
-      "nombre": "Valentina Sosa",
-      "documento": "B4048249",
-      "email": "valentina.sosa@hotmail.com"
-    },
-    {
-      "id": 1787067002849.8572,
-      "nombre": "Valentina Dupont",
-      "documento": "E3877669",
-      "email": "valentina.dupont@outlook.com"
-    },
-    {
-      "id": 1787067002849.8586,
-      "nombre": "Lucas Wilson",
-      "documento": 74404531,
-      "email": "lucas.wilson@gmail.com"
-    },
-    {
-      "id": 1787067002849.7712,
-      "nombre": "Victoria Schneider",
-      "documento": "N1877901",
-      "email": "victoria.schneider@yahoo.com"
-    },
-    {
-      "id": 1787067002849.327,
-      "nombre": "Emma Davis",
-      "documento": "B6044629",
-      "email": "emma.davis@outlook.com"
-    },
-    {
-      "id": 1787067002849.4832,
-      "nombre": "Martina Sánchez",
-      "documento": "A1759542",
-      "email": "martina.sánchez@hotmail.com"
-    },
-    {
-      "id": 1787067002849.62,
-      "nombre": "Santiago Díaz",
-      "documento": 68699108,
-      "email": "santiago.díaz@company.com"
-    },
-    {
-      "id": 1787067002849.3452,
-      "nombre": "Santiago Romero",
-      "documento": "E1163278",
-      "email": "santiago.romero@hotmail.com"
-    },
-    {
-      "id": 1787067002849.5784,
-      "nombre": "Lucía Bernard",
-      "documento": "B1659481",
-      "email": "lucía.bernard@gmail.com"
-    },
-    {
-      "id": 1787067002849.3123,
-      "nombre": "Emma Fischer",
-      "documento": 83463074,
-      "email": "emma.fischer@yahoo.com"
-    },
-    {
-      "id": 1787067002849.0286,
-      "nombre": "Lucía Rodríguez",
-      "documento": 49218186,
-      "email": "lucía.rodríguez@gmail.com"
-    },
-    {
-      "id": 1787067002849.7588,
-      "nombre": "Felipe Sosa",
-      "documento": 75326708,
-      "email": "felipe.sosa@gmail.com"
-    },
-    {
-      "id": 1787067002849.07,
-      "nombre": "Gabriel Fischer",
-      "documento": 49864872,
-      "email": "gabriel.fischer@gmail.com"
-    },
-    {
-      "id": 1787067002849.3914,
-      "nombre": "Felipe Fischer",
-      "documento": "N2057106",
-      "email": "felipe.fischer@yahoo.com"
-    },
-    {
-      "id": 1787067002849.8184,
-      "nombre": "Emma Sosa",
-      "documento": "N3280005",
-      "email": "emma.sosa@hotmail.com"
-    },
-    {
-      "id": 1787669049886,
-      "codigo": "CLI-000001",
-      "nombre": "Mountain-200 Silver, 42",
-      "dni": "",
-      "email": "",
-      "telefono": ""
-    },
-    {
-      "id": 1787669049888,
-      "codigo": "CLI-000003",
-      "nombre": "Road-750 Black, 48",
-      "dni": "",
-      "email": "",
-      "telefono": ""
-    },
-    {
-      "id": 1787669049889,
-      "codigo": "CLI-000004",
-      "nombre": "Road-550-W Yellow, 44",
-      "dni": "",
-      "email": "",
-      "telefono": ""
-    },
-    {
-      "id": 1787669049890,
-      "codigo": "CLI-000005",
-      "nombre": "Mountain-200 Black, 38",
-      "dni": "",
-      "email": "",
-      "telefono": ""
-    }
-  ],
+  "products": [],
+  "clientes": [],
   "proveedores": [],
   "ventas": [],
   "users": [
     {
-      "id": "demo-owner",
-      "nombre": "Sergio P.",
-      "email": "admin@stockflow.com",
+      "id": "user_2e40e70d32c7393d",
+      "nombre": "A",
+      "email": "a3@a.com",
+      "password": "$2b$10$0mv37FTjxq056vtH43FUterzkOsmvrQctL.xzXm5m4.wr02QDL5aq",
       "role": "owner",
-      "product": "stockflow_plus",
-      "plan": "plus",
-      "subscriptionStatus": "active",
-      "trialEnabled": false,
-      "createdAt": "2026-09-07"
+      "company": "A",
+      "companyId": "company_e484b882239121c4",
+      "createdAt": "2026-09-15T18:39:56.511Z"
+    },
+    {
+      "id": "user_73809e3f554141da",
+      "nombre": "B",
+      "email": "b3@b.com",
+      "password": "$2b$10$nUPkddcxDfZEU./aG2DgR.Mxjuxb9kG8UdpqhoNw.X33IyvpWwvK6",
+      "role": "owner",
+      "company": "B",
+      "companyId": "company_0f184185cc8e5af6",
+      "createdAt": "2026-09-15T18:39:56.897Z"
+    }
+  ],
+  "companies": [
+    {
+      "id": "company_e484b882239121c4",
+      "nombre": "A",
+      "slug": "a-tenant",
+      "logoUrl": null,
+      "emailContacto": null,
+      "telefono": null,
+      "pais": null,
+      "timezone": "UTC",
+      "currency": "ARS",
+      "status": "trial",
+      "createdAt": "2026-09-15T18:39:56.279Z",
+      "updatedAt": "2026-09-15T18:39:56.279Z"
+    },
+    {
+      "id": "company_0f184185cc8e5af6",
+      "nombre": "B",
+      "slug": "b-tenant",
+      "logoUrl": null,
+      "emailContacto": null,
+      "telefono": null,
+      "pais": null,
+      "timezone": "UTC",
+      "currency": "ARS",
+      "status": "trial",
+      "createdAt": "2026-09-15T18:39:56.718Z",
+      "updatedAt": "2026-09-15T18:39:56.718Z"
+    }
+  ],
+  "userCompanies": [
+    {
+      "id": "user_company_d837ad0c84aca321",
+      "userId": "user_2e40e70d32c7393d",
+      "companyId": "company_e484b882239121c4",
+      "role": "owner",
+      "isOwner": true,
+      "invitedByUserId": null,
+      "acceptedAt": null,
+      "createdAt": "2026-09-15T18:39:56.710Z",
+      "updatedAt": "2026-09-15T18:39:56.710Z"
+    },
+    {
+      "id": "user_company_e94a92f654c817b9",
+      "userId": "user_73809e3f554141da",
+      "companyId": "company_0f184185cc8e5af6",
+      "role": "owner",
+      "isOwner": true,
+      "invitedByUserId": null,
+      "acceptedAt": null,
+      "createdAt": "2026-09-15T18:39:57.065Z",
+      "updatedAt": "2026-09-15T18:39:57.065Z"
+    }
+  ],
+  "roles": [],
+  "permissions": [],
+  "rolePermissions": [],
+  "sessions": [],
+  "billingProducts": [
+    {
+      "id": "billing_product_60a6f28e8b72c1fe",
+      "code": "stockflow",
+      "name": "StockFlow",
+      "slug": "stockflow",
+      "description": "Inventario y gestión empresarial",
+      "status": "active",
+      "createdAt": "2026-09-15T18:39:56.711Z"
+    },
+    {
+      "id": "billing_product_5c47ef3604b17845",
+      "code": "stockflow_plus",
+      "name": "StockFlow+",
+      "slug": "stockflow-plus",
+      "description": "StockFlow con funcionalidad premium",
+      "status": "active",
+      "createdAt": "2026-09-15T18:39:56.711Z"
+    }
+  ],
+  "plans": [
+    {
+      "id": "plan_eab93b1a0f10cc59",
+      "productId": "billing_product_60a6f28e8b72c1fe",
+      "code": "standard",
+      "name": "Standard",
+      "description": null,
+      "amount": 0,
+      "currency": "ARS",
+      "billingInterval": "monthly",
+      "isActive": true,
+      "metadata": null,
+      "createdAt": "2026-09-15T18:39:56.711Z",
+      "updatedAt": "2026-09-15T18:39:56.711Z"
+    },
+    {
+      "id": "plan_fa1d204a3be2131d",
+      "productId": "billing_product_5c47ef3604b17845",
+      "code": "plus",
+      "name": "Plus",
+      "description": null,
+      "amount": 19900,
+      "currency": "ARS",
+      "billingInterval": "monthly",
+      "isActive": true,
+      "metadata": null,
+      "createdAt": "2026-09-15T18:39:56.711Z",
+      "updatedAt": "2026-09-15T18:39:56.711Z"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "subscription_b9c187220c405452",
+      "companyId": "company_e484b882239121c4",
+      "productId": "billing_product_60a6f28e8b72c1fe",
+      "planId": "plan_eab93b1a0f10cc59",
+      "status": "trial",
+      "trialStartAt": "2026-09-15T18:39:56.711Z",
+      "trialEndAt": "2026-10-15T18:39:56.711Z",
+      "startedAt": "2026-09-15T18:39:56.711Z",
+      "endedAt": null,
+      "nextBillingAt": "2026-10-15T18:39:56.711Z",
+      "autoRenew": true,
+      "cancelAt": null,
+      "cancelReason": null,
+      "externalSubscriptionId": null,
+      "provider": "manual",
+      "priceAmount": 0,
+      "currency": "ARS",
+      "createdAt": "2026-09-15T18:39:56.711Z",
+      "updatedAt": "2026-09-15T18:39:56.711Z"
+    },
+    {
+      "id": "subscription_8c259248a99b7315",
+      "companyId": "company_0f184185cc8e5af6",
+      "productId": "stockflow-product",
+      "planId": "stockflow-standard",
+      "status": "trial",
+      "trialStartAt": "2026-09-15T18:39:57.065Z",
+      "trialEndAt": "2026-10-15T18:39:57.065Z",
+      "startedAt": "2026-09-15T18:39:57.065Z",
+      "endedAt": null,
+      "nextBillingAt": "2026-10-15T18:39:57.065Z",
+      "autoRenew": true,
+      "cancelAt": null,
+      "cancelReason": null,
+      "externalSubscriptionId": null,
+      "provider": "manual",
+      "priceAmount": 0,
+      "currency": "ARS",
+      "createdAt": "2026-09-15T18:39:57.065Z",
+      "updatedAt": "2026-09-15T18:39:57.065Z"
+    }
+  ],
+  "billingCustomers": [],
+  "paymentMethodReferences": [],
+  "billingEvents": [
+    {
+      "id": "billing_event_8bf8a5b9f03960ca",
+      "companyId": "company_e484b882239121c4",
+      "subscriptionId": "subscription_b9c187220c405452",
+      "billingCustomerId": null,
+      "eventType": "trial_started",
+      "provider": "manual",
+      "externalEventId": null,
+      "actorUserId": "user_2e40e70d32c7393d",
+      "payload": {
+        "trialStartAt": "2026-09-15T18:39:56.711Z",
+        "trialEndAt": "2026-10-15T18:39:56.711Z"
+      },
+      "occurredAt": "2026-09-15T18:39:56.712Z",
+      "createdAt": "2026-09-15T18:39:56.712Z"
+    },
+    {
+      "id": "billing_event_9946c4cf7e4e36f9",
+      "companyId": "company_0f184185cc8e5af6",
+      "subscriptionId": "subscription_8c259248a99b7315",
+      "billingCustomerId": null,
+      "eventType": "trial_started",
+      "provider": "manual",
+      "externalEventId": null,
+      "actorUserId": "user_73809e3f554141da",
+      "payload": {
+        "trialStartAt": "2026-09-15T18:39:57.065Z",
+        "trialEndAt": "2026-10-15T18:39:57.065Z"
+      },
+      "occurredAt": "2026-09-15T18:39:57.065Z",
+      "createdAt": "2026-09-15T18:39:57.065Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "audit_86ea0b1a18a01a65",
+      "entityType": "company",
+      "entityId": "company_e484b882239121c4",
+      "action": "company_created",
+      "actorUserId": "user_2e40e70d32c7393d",
+      "actorCompanyId": "company_e484b882239121c4",
+      "metadata": {
+        "ownerEmail": "a3@a.com"
+      },
+      "createdAt": "2026-09-15T18:39:56.712Z"
+    },
+    {
+      "id": "audit_6f5a520a601953fc",
+      "entityType": "company",
+      "entityId": "company_0f184185cc8e5af6",
+      "action": "company_created",
+      "actorUserId": "user_73809e3f554141da",
+      "actorCompanyId": "company_0f184185cc8e5af6",
+      "metadata": {
+        "ownerEmail": "b3@b.com"
+      },
+      "createdAt": "2026-09-15T18:39:57.065Z"
     }
   ]
 }

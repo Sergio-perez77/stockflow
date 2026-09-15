@@ -1,8 +1,7 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { createUser, getUsers, normalizeUser } from "@/lib/auth";
-import { readDb, writeDb } from "@/lib/db";
-import { createBillingEventRecord, createCompanyRecord, createUserCompanyRecord, generateId } from "@/lib/saas";
+import { createCompanyWithOwner, createSessionForUser, issueSessionToken } from "@/lib/saas-auth";
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({}));
@@ -18,75 +17,44 @@ export async function POST(request: Request) {
     );
   }
 
-  const users = getUsers();
-  const existing = users.find((user) => user.email.toLowerCase() === email);
-  if (existing) {
+  try {
+    const created = createCompanyWithOwner({
+      nombre: companyName,
+      email,
+      password,
+      nombrePersona: nombre,
+    });
+
+    const sessionToken = issueSessionToken(created.user.id);
+    const cookieStore = await cookies();
+    cookieStore.set("stockflow_session", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    createSessionForUser(created.user.id, {
+      token: sessionToken,
+      companyId: created.company.id,
+      userAgent: request.headers.get("user-agent"),
+      ipAddress: request.headers.get("x-forwarded-for") ?? null,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      data: {
+        user: { ...created.user, password: undefined },
+        company: created.company,
+        subscription: created.subscription,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo registrar la cuenta.";
     return NextResponse.json(
-      { ok: false, message: "Ya existe un usuario con ese email." },
+      { ok: false, message },
       { status: 409 }
     );
   }
-
-  const nextUser = createUser(users, {
-    id: generateId("user"),
-    nombre,
-    email,
-    password,
-    role: "user",
-    product: "stockflow",
-    plan: "standard",
-    company: companyName,
-    subscriptionStatus: "trial",
-    trialEnabled: true,
-  });
-
-  if (!nextUser) {
-    return NextResponse.json(
-      { ok: false, message: "No se pudo crear el usuario." },
-      { status: 500 }
-    );
-  }
-
-  const db = readDb();
-  const company = createCompanyRecord({
-    nombre: companyName,
-    currency: "ARS",
-    status: "trial",
-  });
-
-  const companyUser = createUserCompanyRecord({
-    userId: nextUser.id,
-    companyId: company.id,
-    role: "owner",
-    isOwner: true,
-  });
-
-  const nextDb = {
-    ...db,
-    companies: [...(Array.isArray(db.companies) ? db.companies : []), company],
-    userCompanies: [...(Array.isArray(db.userCompanies) ? db.userCompanies : []), companyUser],
-    billingEvents: [
-      ...((Array.isArray(db.billingEvents) ? db.billingEvents : []) as typeof db.billingEvents),
-      createBillingEventRecord({
-        companyId: company.id,
-        eventType: "trial_started",
-        occurredAt: new Date().toISOString(),
-        actorUserId: nextUser.id,
-        payload: { source: "register", product: nextUser.product ?? "stockflow" },
-      }),
-    ],
-  };
-
-  writeDb(nextDb);
-
-  return NextResponse.json({
-    ok: true,
-    data: {
-      user: {
-        ...normalizeUser(nextUser),
-        password: undefined,
-      },
-      company,
-    },
-  });
 }

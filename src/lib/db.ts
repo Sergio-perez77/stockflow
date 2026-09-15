@@ -8,6 +8,7 @@ export type DbData = {
   clientes: unknown[];
   proveedores: unknown[];
   ventas: unknown[];
+  compras: unknown[];
   users: unknown[];
   companies: unknown[];
   userCompanies: unknown[];
@@ -25,6 +26,10 @@ export type DbData = {
 };
 
 export function readDb(): DbData {
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    throw new Error("Production requires DATABASE_URL. JSON fallback is disabled in production.");
+  }
+
   try {
     const raw = fs.readFileSync(DATA_FILE, "utf-8");
     return JSON.parse(raw) as DbData;
@@ -34,6 +39,7 @@ export function readDb(): DbData {
       clientes: [],
       proveedores: [],
       ventas: [],
+      compras: [],
       users: [],
       companies: [],
       userCompanies: [],
@@ -67,6 +73,8 @@ export function apiCollectionNameForKey(clave: string) {
       return "proveedores" as const;
     case "ventas":
       return "ventas" as const;
+    case "compras":
+      return "compras" as const;
     default:
       return null;
   }
@@ -74,7 +82,7 @@ export function apiCollectionNameForKey(clave: string) {
 
 export function replaceCollectionData<T>(
   db: DbData,
-  collection: "products" | "clientes" | "proveedores" | "ventas",
+  collection: "products" | "clientes" | "proveedores" | "ventas" | "compras",
   nextData: T[]
 ): DbData {
   const nextDb = { ...db };

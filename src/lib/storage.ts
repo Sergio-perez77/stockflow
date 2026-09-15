@@ -1,10 +1,30 @@
 import type { Cliente } from "@/types/cliente";
 
+export function getTenantStorageScope(): string {
+  if (typeof window === "undefined") {
+    return "anon";
+  }
+
+  const rawCookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith("stockflow_session="));
+
+  const sessionValue = rawCookie ? rawCookie.split("=").slice(1).join("=") : "";
+  const safeSession = decodeURIComponent(sessionValue || "").replace(/[^a-zA-Z0-9:_-]/g, "_");
+
+  return safeSession ? `tenant_${safeSession.slice(0, 32)}` : "tenant_anonymous";
+}
+
+export function tenantScopedStorageKey(clave: string): string {
+  return `${getTenantStorageScope()}::${clave}`;
+}
+
 const API_COLLECTIONS: Record<string, string> = {
   productos: "products",
   clientes: "clientes",
   proveedores: "proveedores",
   ventas: "ventas",
+  compras: "compras",
 };
 
 export function obtenerRutaApiDatos(clave: string): string | null {
@@ -16,7 +36,8 @@ export function obtenerRutaApiDatos(clave: string): string | null {
 export function cargarDatos<T>(clave: string): T[] {
   if (typeof window === "undefined") return [];
 
-  const datos = localStorage.getItem(clave);
+  const storageKey = tenantScopedStorageKey(clave);
+  const datos = localStorage.getItem(storageKey);
 
   if (!datos) return [];
 
@@ -51,7 +72,7 @@ export function cargarDatos<T>(clave: string): T[] {
       JSON.stringify(clientes)
     ) {
       localStorage.setItem(
-        clave,
+        storageKey,
         JSON.stringify(clientesNormalizados)
       );
     }
@@ -65,7 +86,8 @@ export function cargarDatos<T>(clave: string): T[] {
 export function guardarDatos<T>(clave: string, datos: T[]) {
   if (typeof window === "undefined") return;
 
-  localStorage.setItem(clave, JSON.stringify(datos));
+  const storageKey = tenantScopedStorageKey(clave);
+  localStorage.setItem(storageKey, JSON.stringify(datos));
 
   const apiPath = obtenerRutaApiDatos(clave);
 
@@ -86,7 +108,7 @@ export function guardarDatos<T>(clave: string, datos: T[]) {
 export function cargarImportacion<T>(clave: string): T | null {
   if (typeof window === "undefined") return null;
 
-  const datos = localStorage.getItem(clave);
+  const datos = localStorage.getItem(tenantScopedStorageKey(clave));
 
   return datos ? JSON.parse(datos) : null;
 }
@@ -98,7 +120,7 @@ export function guardarImportacion<T>(
   if (typeof window === "undefined") return;
 
   localStorage.setItem(
-    clave,
+    tenantScopedStorageKey(clave),
     JSON.stringify(datos)
   );
 }
@@ -106,5 +128,5 @@ export function guardarImportacion<T>(
 export function eliminarImportacion(clave: string) {
   if (typeof window === "undefined") return;
 
-  localStorage.removeItem(clave);
+  localStorage.removeItem(tenantScopedStorageKey(clave));
 }

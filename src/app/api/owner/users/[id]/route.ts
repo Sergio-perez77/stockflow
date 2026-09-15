@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
-import { getSessionCookieValue, isOwnerRole } from "@/lib/auth";
+import { readDb, writeDb } from "@/lib/db";
+import { requireAuth, requireOwner } from "@/lib/saas-auth";
 import { applyOwnerTrialAction, getOwnerUserById, normalizeOwnerUser, updateOwnerUser } from "@/lib/owner";
+import { createAuditLogRecord, createBillingEventRecord } from "@/lib/saas";
 
 export async function PATCH(
   request: Request,
@@ -10,14 +12,16 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("stockflow_session")?.value;
-  const session = getSessionCookieValue(sessionCookie);
+  const token = cookieStore.get("stockflow_session")?.value ?? null;
+  const auth = requireAuth({ sessionToken: token });
 
-  if (!session || !isOwnerRole(session)) {
-    return NextResponse.json(
-      { ok: false, message: "Acceso no autorizado." },
-      { status: 403 }
-    );
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, message: auth.message }, { status: 401 });
+  }
+
+  const owner = requireOwner({ user: auth.user });
+  if (!owner.ok) {
+    return NextResponse.json({ ok: false, message: owner.message }, { status: 403 });
   }
 
   const payload = await request.json().catch(() => ({}));
@@ -88,6 +92,55 @@ export async function PATCH(
   }
 
   const updated = updateOwnerUser(id, nextUser);
+
+  if (updated) {
+    const db = readDb();
+    const action = (() => {
+      if (payload.action === "activate_trial") return "trial_modified";
+      if (payload.action === "deactivate_trial") return "trial_modified";
+      if (payload.action === "reset_trial") return "trial_modified";
+      if (payload.subscriptionStatus === "active") return "subscription_activated";
+      if (payload.subscriptionStatus === "suspended") return "subscription_suspended";
+      if (payload.subscriptionStatus === "canceled") return "subscription_canceled";
+      if (typeof payload.plan === "string") return "plan_changed";
+      return "trial_modified";
+    })();
+
+    const event = createBillingEventRecord({
+      companyId: String(targetUser.company ?? auth.user.companyId ?? ""),
+      subscriptionId: null,
+      eventType: action,
+      occurredAt: new Date().toISOString(),
+      actorUserId: auth.user.id,
+      payload: {
+        targetUserId: id,
+        targetEmail: updated.email,
+        nextSubscriptionStatus: updated.subscriptionStatus,
+        nextPlan: updated.plan,
+        action: payload.action ?? payload.subscriptionStatus ?? payload.plan ?? "manual_update",
+      },
+    });
+
+    const auditLog = createAuditLogRecord({
+      entityType: "user",
+      entityId: updated.id,
+      action,
+      actorUserId: auth.user.id,
+      actorCompanyId: auth.user.companyId ?? null,
+      metadata: {
+        targetUserId: updated.id,
+        targetEmail: updated.email,
+        plan: updated.plan,
+        status: updated.subscriptionStatus,
+      },
+    });
+
+    writeDb({
+      ...db,
+      billingEvents: [...(Array.isArray(db.billingEvents) ? db.billingEvents : []), event],
+      auditLogs: [...(Array.isArray(db.auditLogs) ? db.auditLogs : []), auditLog],
+    });
+  }
 
   return NextResponse.json({ ok: true, data: updated });
 }

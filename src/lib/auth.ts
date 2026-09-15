@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 export type UserRole = "admin" | "gerente" | "vendedor" | "owner" | "user";
 export type ProductType = "stockflow" | "stockflow_plus";
@@ -31,6 +32,7 @@ export type SessionUser = {
   nombre: string;
   email: string;
   role: UserRole;
+  globalRole?: "stockflow_owner" | "support_admin" | "platform_admin" | null;
   plan: SubscriptionPlan;
   product?: ProductType;
   company?: string;
@@ -126,19 +128,28 @@ function normalizePaymentProvider(provider?: PaymentProvider | string | null): P
 }
 
 export function isOwnerRole(user?: Partial<SessionUser> | SessionUser | null): boolean {
-  const role = normalizeRole(user?.role);
-  return role === "owner" || role === "admin";
+  const globalRole = String(user?.globalRole ?? "").trim();
+  if (globalRole === "platform_admin" || globalRole === "stockflow_owner") {
+    return true;
+  }
+
+  return false;
 }
 
 export function hashPassword(password: string): string {
   const source = String(password ?? "").trim();
   if (!source) return "";
-  return crypto.createHash("sha256").update(source).digest("hex");
+  return bcrypt.hashSync(source, 10);
 }
 
 export function verifyPassword(password: string, hash: string): boolean {
   if (!password || !hash) return false;
-  return hashPassword(password) === String(hash).trim();
+
+  try {
+    return bcrypt.compareSync(String(password), String(hash));
+  } catch {
+    return false;
+  }
 }
 
 export function getSessionCookieValue(raw?: string | null): SessionUser | null {
@@ -196,12 +207,21 @@ export function normalizeUser(user: Partial<SessionUser>): SessionUser {
   const paymentMethodStatus = normalizePaymentMethodStatus(user.paymentMethodStatus ?? "not_added");
   const paymentProvider = normalizePaymentProvider(user.paymentProvider ?? null);
 
+  const globalRole = (() => {
+    const normalized = String(user.globalRole ?? "").trim();
+    if (normalized === "stockflow_owner" || normalized === "support_admin" || normalized === "platform_admin") {
+      return normalized as SessionUser["globalRole"];
+    }
+    return null;
+  })();
+
   return {
     id: String(user.id ?? `user-${Date.now()}`),
     nombre: nombre || "Usuario",
     email: email || "usuario@stockflow.com",
     password,
     role,
+    globalRole,
     product,
     plan,
     company: String(user.company ?? "").trim() || undefined,
@@ -332,16 +352,6 @@ export function authenticate(
     };
   }
 
-  if (
-    normalizedEmail === DEMO_USER.email &&
-    verifyPassword(password.trim(), hashPassword(String(DEMO_USER.password ?? "").trim()))
-  ) {
-    return {
-      ...DEMO_USER,
-      password: undefined,
-    };
-  }
-
   return null;
 }
 
@@ -425,6 +435,7 @@ export function getFeatureForPath(pathname: string): FeatureKey | null {
     "dashboard/reportes": "reportes",
     "dashboard/configuracion": "configuracion",
     "dashboard/categorias": "categorias",
+    "dashboard/suscripcion": "suscripciones",
   };
 
   return mapping[normalized] ?? null;

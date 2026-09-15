@@ -13,6 +13,7 @@ import type { Proveedor } from "@/types/proveedor";
 import type { Venta } from "@/types/venta";
 
 import LowStockProducts from "@/components/dashboard/LowStockProducts";
+import SubscriptionStatusCard from "@/components/dashboard/SubscriptionStatusCard";
 
 import { convertirNumero } from "@/lib/numeros";
 
@@ -87,6 +88,10 @@ productosMasVendidos.sort(
       <p className="text-gray-400 mb-8">
         Bienvenido a StockFlow.
       </p>
+
+      <div className="mb-8">
+        <SubscriptionStatusCard />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
 

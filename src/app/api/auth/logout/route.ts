@@ -1,11 +1,17 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { SESSION_KEY } from "@/lib/auth";
+import { revokeSession } from "@/lib/saas-auth";
 
-export async function POST() {
+export async function POST(request: Request) {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_KEY, "", {
+  const token = cookieStore.get("stockflow_session")?.value ?? null;
+
+  if (token) {
+    revokeSession(token);
+  }
+
+  cookieStore.set("stockflow_session", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

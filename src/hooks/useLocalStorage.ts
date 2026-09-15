@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cargarDatos, obtenerRutaApiDatos } from "@/lib/storage";
+import { cargarDatos, obtenerRutaApiDatos, tenantScopedStorageKey } from "@/lib/storage";
 
 export function useLocalStorage<T>(clave: string) {
   const [datos, setDatos] = useState<T[]>(() =>
@@ -20,19 +20,19 @@ export function useLocalStorage<T>(clave: string) {
       return;
     }
 
+    const apiUrl = apiPath;
     let isActive = true;
-    const datosLocales = cargarDatos<T>(clave);
 
     async function cargarDesdeApi() {
       try {
-        const url = apiPath ?? "";
-        if (!url) {
-          throw new Error("Ruta de API inválida");
-        }
-
-        const response = await fetch(url);
+        const response = await fetch(apiUrl, { credentials: "include" });
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem(tenantScopedStorageKey(clave));
+            setDatos([]);
+            return;
+          }
           throw new Error("No se pudo cargar la colección");
         }
 
@@ -41,25 +41,13 @@ export function useLocalStorage<T>(clave: string) {
 
         if (!isActive) return;
 
-        // Durante la transición desde localStorage, no se descartan datos
-        // locales si la colección remota todavía está vacía.
-        if (datosRemotos.length === 0 && datosLocales.length > 0) {
-          const fallbackUrl = apiPath ?? "";
-
-          if (fallbackUrl) {
-            await fetch(fallbackUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(datosLocales),
-            });
-          }
-          return;
-        }
-
-        localStorage.setItem(clave, JSON.stringify(datosRemotos));
+        localStorage.setItem(tenantScopedStorageKey(clave), JSON.stringify(datosRemotos));
         setDatos(datosRemotos);
       } catch {
-        // Fallback local si la API no está disponible.
+        const fallback = cargarDatos<T>(clave);
+        if (isActive) {
+          setDatos(fallback);
+        }
       } finally {
         if (isActive) {
           setClaveSincronizada(clave);
@@ -84,13 +72,16 @@ export function useLocalStorage<T>(clave: string) {
       return;
     }
 
-    localStorage.setItem(clave, JSON.stringify(datos));
+    localStorage.setItem(tenantScopedStorageKey(clave), JSON.stringify(datos));
 
     if (!apiPath) return;
 
-    void fetch(apiPath, {
+    const apiUrl = apiPath;
+
+    void fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(datos),
     }).catch(() => undefined);
   }, [datos, clave, claveSincronizada]);

@@ -25,7 +25,7 @@ const NAV_ITEMS: Array<{
   { href: "/dashboard/productos", label: "Productos", icon: Package, feature: "productos" },
   { href: "/dashboard/clientes", label: "Clientes", icon: Users, feature: "clientes" },
   { href: "/dashboard/usuarios", label: "Usuarios", icon: Users, feature: "usuarios" },
-  { href: "/dashboard/suscripciones", label: "Suscripciones", icon: DollarSign, feature: "suscripciones" },
+  { href: "/dashboard/suscripcion", label: "Suscripción", icon: DollarSign, feature: "suscripciones" },
   { href: "/dashboard/proveedores", label: "Proveedores", icon: Truck, feature: "proveedores" },
   { href: "/dashboard/compras", label: "Compras", icon: ShoppingCart, feature: "compras" },
   { href: "/dashboard/ventas", label: "Ventas", icon: DollarSign, feature: "ventas" },

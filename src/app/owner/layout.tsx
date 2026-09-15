@@ -2,13 +2,19 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getSessionCookieValue, isOwnerRole } from "@/lib/auth";
+import { requireAuth, requireOwner } from "@/lib/saas-auth";
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const session = getSessionCookieValue(cookieStore.get("stockflow_session")?.value ?? null);
+  const token = cookieStore.get("stockflow_session")?.value ?? null;
+  const auth = requireAuth({ sessionToken: token });
 
-  if (!session || !isOwnerRole(session)) {
+  if (!auth.ok) {
+    redirect("/dashboard");
+  }
+
+  const owner = requireOwner({ user: auth.user });
+  if (!owner.ok) {
     redirect("/dashboard");
   }
 

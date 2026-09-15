@@ -1,15 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import {
-  canAccessFeature,
-  getFeatureForPath,
-  getStoredSession,
-  setStoredSession,
-  DEMO_USER,
-} from "@/lib/auth";
+import { canAccessFeature, getFeatureForPath } from "@/lib/auth";
 
 export default function AuthGuard({
   children,
@@ -18,40 +12,55 @@ export default function AuthGuard({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const session = getStoredSession();
-  const isAuthenticated = Boolean(session);
-  const feature = getFeatureForPath(pathname ?? "/");
-  const hasAccess = !feature || canAccessFeature(session, feature);
+  const [session, setSession] = useState<{ email?: string; role?: string; globalRole?: string } | null>(null);
+  const [busy, setBusy] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      const isLocalhost =
-        typeof window !== "undefined" &&
-        (window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1");
+    let mounted = true;
 
-      if (process.env.NODE_ENV === "development" || isLocalhost) {
-        try {
-          setStoredSession(DEMO_USER);
-          router.replace("/dashboard");
-        } catch (e) {
-          // ignore
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/auth/session", { credentials: "include" });
+        const data = await response.json();
+
+        if (!mounted) return;
+
+        if (!response.ok || !data?.ok || !data.user) {
+          setSession(null);
+          router.replace("/login");
+          return;
         }
 
-        return;
+        setSession(data.user);
+      } catch {
+        if (mounted) {
+          setSession(null);
+          router.replace("/login");
+        }
+      } finally {
+        if (mounted) {
+          setBusy(false);
+        }
       }
-
-      router.replace("/login");
     }
-  }, [isAuthenticated, router]);
+
+    loadSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  const feature = getFeatureForPath(pathname ?? "/");
+  const hasAccess = !feature || canAccessFeature(session as any, feature);
 
   useEffect(() => {
-    if (isAuthenticated && feature && !hasAccess) {
+    if (session && feature && !hasAccess) {
       router.replace("/dashboard");
     }
-  }, [feature, hasAccess, isAuthenticated, router]);
+  }, [feature, hasAccess, router, session]);
 
-  if (!isAuthenticated) {
+  if (busy) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
         <div className="text-center">
@@ -60,6 +69,10 @@ export default function AuthGuard({
         </div>
       </div>
     );
+  }
+
+  if (!session) {
+    return null;
   }
 
   if (!hasAccess) {

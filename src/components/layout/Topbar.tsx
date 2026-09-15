@@ -1,16 +1,35 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-import { clearStoredSession, getStoredSession } from "@/lib/auth";
 
 export default function Topbar() {
   const router = useRouter();
-  const user = getStoredSession();
+  const [user, setUser] = useState<{ nombre?: string; email?: string } | null>(null);
 
-  function handleLogout() {
-    clearStoredSession();
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const response = await fetch("/api/auth/session", { credentials: "include" });
+        const data = await response.json();
+        if (response.ok && data?.ok) {
+          setUser(data.user ?? null);
+        }
+      } catch {
+        setUser(null);
+      }
+    }
+
+    loadUser();
+  }, []);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
     router.replace("/login");
+    router.refresh();
   }
 
   return (
